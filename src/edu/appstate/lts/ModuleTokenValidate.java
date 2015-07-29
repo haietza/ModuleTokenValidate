@@ -1,0 +1,81 @@
+package edu.appstate.lts;
+
+import com.wowza.wms.application.*;
+import com.wowza.wms.amf.*;
+import com.wowza.wms.client.*;
+import com.wowza.wms.module.*;
+import com.wowza.wms.request.*;
+import com.wowza.wms.stream.*;
+import com.wowza.wms.rtp.model.*;
+import com.wowza.wms.httpstreamer.model.*;
+import com.wowza.wms.httpstreamer.cupertinostreaming.httpstreamer.*;
+import com.wowza.wms.httpstreamer.smoothstreaming.httpstreamer.*;
+
+public class ModuleTokenValidate extends ModuleBase {
+	
+	private TokenValidate tokenValidate;
+	private String uri;
+	private String referrer;
+	private IClient client;
+	private String dateStarted;
+	private String ipAddress;
+	
+	public ModuleTokenValidate() {
+		super();
+	}
+
+	public void onAppStart(IApplicationInstance appInstance) {
+		String fullname = appInstance.getApplication().getName() + "/" + appInstance.getName();
+		getLogger().info("onAppStart: " + fullname);
+	}
+
+	public void onAppStop(IApplicationInstance appInstance) {
+		String fullname = appInstance.getApplication().getName() + "/" + appInstance.getName();
+		getLogger().info("onAppStop: " + fullname);
+	}
+
+	public void onConnect(IClient client, RequestFunction function, AMFDataList params) {
+		getLogger().info("onConnect: " + client.getClientId());
+	}
+
+	public void onConnectAccept(IClient client) {
+		getLogger().info("onConnectAccept: " + client.getClientId());
+	}
+
+	public void onConnectReject(IClient client) {
+		getLogger().info("onConnectReject: " + client.getClientId());
+	}
+
+	public void onDisconnect(IClient client) {
+		getLogger().info("onDisconnect: " + client.getClientId());
+	}
+
+	public void onStreamCreate(IMediaStream stream) {
+		getLogger().info("onStreamCreate: " + stream.getSrc());
+		client = stream.getClient();
+		uri = stream.getQueryStr();
+		// uri = client.getUri();
+		referrer = client.getReferrer();
+		dateStarted = client.getDateStarted();
+		ipAddress = client.getIp();
+		getLogger().info("ModuleTokenValidate: "
+				+ "\nClient: " + client
+				+ "\n URI: " + uri 
+				+ "\nReferrer: " + referrer
+				+ "\nDate Started: " + dateStarted
+				+ "\nIP: " + ipAddress);
+	}
+
+	public void onStreamDestroy(IMediaStream stream) {
+		getLogger().info("onStreamDestroy: " + stream.getSrc());
+	}
+
+	public void onHTTPSessionCreate(IHTTPStreamerSession httpSession) {
+		getLogger().info("onHTTPSessionCreate: " + httpSession.getSessionId());
+	}
+
+	public void onHTTPSessionDestroy(IHTTPStreamerSession httpSession) {
+		getLogger().info("onHTTPSessionDestroy: " + httpSession.getSessionId());
+	}
+
+}
