@@ -35,7 +35,10 @@ public class ModuleTokenValidate extends ModuleBase {
 		
 		tokenValidate = new TokenValidate(client);
 		if (!tokenValidate.validate()) {
-			client.rejectConnection("You are not a valid user!");
+			client.rejectConnection();
+		}
+		else {
+			// get video from Mensch store via token/hash
 		}
 	}
 
