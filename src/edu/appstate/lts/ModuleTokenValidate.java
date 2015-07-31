@@ -14,11 +14,7 @@ import com.wowza.wms.httpstreamer.smoothstreaming.httpstreamer.*;
 public class ModuleTokenValidate extends ModuleBase {
 	
 	private TokenValidate tokenValidate;
-	private String uri;
-	private String referrer;
-	private IClient client;
-	private String dateStarted;
-	private String ipAddress;
+	private String token;
 	
 	public ModuleTokenValidate() {
 		super();
@@ -36,6 +32,11 @@ public class ModuleTokenValidate extends ModuleBase {
 
 	public void onConnect(IClient client, RequestFunction function, AMFDataList params) {
 		getLogger().info("onConnect: " + client.getClientId());
+		
+		tokenValidate = new TokenValidate(client);
+		if (!tokenValidate.validate()) {
+			client.rejectConnection("You are not a valid user!");
+		}
 	}
 
 	public void onConnectAccept(IClient client) {
@@ -52,18 +53,6 @@ public class ModuleTokenValidate extends ModuleBase {
 
 	public void onStreamCreate(IMediaStream stream) {
 		getLogger().info("onStreamCreate: " + stream.getSrc());
-		client = stream.getClient();
-		uri = stream.getQueryStr();
-		// uri = client.getUri();
-		referrer = client.getReferrer();
-		dateStarted = client.getDateStarted();
-		ipAddress = client.getIp();
-		getLogger().info("ModuleTokenValidate: "
-				+ "\nClient: " + client
-				+ "\n URI: " + uri 
-				+ "\nReferrer: " + referrer
-				+ "\nDate Started: " + dateStarted
-				+ "\nIP: " + ipAddress);
 	}
 
 	public void onStreamDestroy(IMediaStream stream) {
