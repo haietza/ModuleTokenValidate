@@ -14,7 +14,6 @@ import com.wowza.wms.httpstreamer.smoothstreaming.httpstreamer.*;
 public class ModuleTokenValidate extends ModuleBase {
 	
 	private TokenValidate tokenValidate;
-	private String token;
 	
 	public ModuleTokenValidate() {
 		super();
@@ -33,13 +32,13 @@ public class ModuleTokenValidate extends ModuleBase {
 	public void onConnect(IClient client, RequestFunction function, AMFDataList params) {
 		getLogger().info("onConnect: " + client.getClientId());
 		
-		tokenValidate = new TokenValidate(client);
+		tokenValidate = new TokenValidate(client);		
 		if (!tokenValidate.validate()) {
-			client.rejectConnection();
+			client.rejectConnection("Invalid token.");
 		}
-		else {
+		// else {
 			// get video from Mensch store via token/hash
-		}
+		// }
 	}
 
 	public void onConnectAccept(IClient client) {
