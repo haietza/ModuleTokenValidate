@@ -20,13 +20,15 @@ public class TokenValidate extends ModuleBase {
 	private String wsIpAddress;
 	
 	public TokenValidate(IClient client) {
+		startDate = new Date();
 		// token = client.getQueryStr();
 		url = client.getPageUrl();
-		startDate = new Date();
 		ipAddress = client.getIp();
 		callWebService();
 	}
 	
+	// Need to figure out how to call web service from
+	// http://ltsdev04.lts.appstate.edu/resolvetoken.php
 	private void callWebService() {
 		mediaHash = "aabbccddeeffgghhiijjkkllmmnnooppqqrrsstt";
 		wsApplication = "appstate";

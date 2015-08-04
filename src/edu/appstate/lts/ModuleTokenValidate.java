@@ -11,6 +11,8 @@ import com.wowza.wms.httpstreamer.model.*;
 import com.wowza.wms.httpstreamer.cupertinostreaming.httpstreamer.*;
 import com.wowza.wms.httpstreamer.smoothstreaming.httpstreamer.*;
 
+import com.wowza.util.URLUtils;
+
 public class ModuleTokenValidate extends ModuleBase {
 	
 	private TokenValidate tokenValidate;
@@ -31,11 +33,12 @@ public class ModuleTokenValidate extends ModuleBase {
 
 	public void onConnect(IClient client, RequestFunction function, AMFDataList params) {
 		getLogger().info("onConnect: " + client.getClientId());
+
 		
-		tokenValidate = new TokenValidate(client);		
-		if (!tokenValidate.validate()) {
-			client.rejectConnection("Invalid token.");
-		}
+		//tokenValidate = new TokenValidate(client);		
+		//if (!tokenValidate.validate()) {
+			//client.rejectConnection("Invalid token.");
+		//}
 		// else {
 			// get video from Mensch store via token/hash
 		// }
@@ -55,6 +58,14 @@ public class ModuleTokenValidate extends ModuleBase {
 
 	public void onStreamCreate(IMediaStream stream) {
 		getLogger().info("onStreamCreate: " + stream.getSrc());
+		
+		getLogger().info("Token: " + stream.getQueryStr());
+		getLogger().info("Stream name: " + stream.getName());
+		
+		tokenValidate = new TokenValidate(stream.getClient());		
+		if (!tokenValidate.validate()) {
+			stream.close();
+		}
 	}
 
 	public void onStreamDestroy(IMediaStream stream) {
