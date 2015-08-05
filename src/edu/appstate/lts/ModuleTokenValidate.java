@@ -33,7 +33,6 @@ public class ModuleTokenValidate extends ModuleBase {
 
 	public void onConnect(IClient client, RequestFunction function, AMFDataList params) {
 		getLogger().info("onConnect: " + client.getClientId());
-
 		
 		//tokenValidate = new TokenValidate(client);		
 		//if (!tokenValidate.validate()) {
@@ -58,11 +57,10 @@ public class ModuleTokenValidate extends ModuleBase {
 
 	public void onStreamCreate(IMediaStream stream) {
 		getLogger().info("onStreamCreate: " + stream.getSrc());
+		getLogger().info("Stream Query: " + stream.getClient().getQueryStr());
 		
-		getLogger().info("Token: " + stream.getQueryStr());
-		getLogger().info("Stream name: " + stream.getName());
-		
-		tokenValidate = new TokenValidate(stream.getClient());		
+		//tokenValidate = new TokenValidate(stream.getClient());	
+		tokenValidate = new TokenValidate(stream.getClient().getQueryStr(), stream.getClient().getPageUrl(), stream.getClient().getIp());
 		if (!tokenValidate.validate()) {
 			stream.close();
 		}
@@ -74,10 +72,29 @@ public class ModuleTokenValidate extends ModuleBase {
 
 	public void onHTTPSessionCreate(IHTTPStreamerSession httpSession) {
 		getLogger().info("onHTTPSessionCreate: " + httpSession.getSessionId());
+		getLogger().info("HTTP Query: " + httpSession.getQueryStr());
+		getLogger().info("Referrer: " + httpSession.getReferrer());
+		getLogger().info("IP: " + httpSession.getIpAddress());
+		
+		//tokenValidate = new TokenValidate(httpSession);
+		//tokenValidate = new TokenValidate(httpSession.getQueryStr(), httpSession.getReferrer(), httpSession.getIpAddress());
+		//if (!tokenValidate.validate()) {
+			//httpSession.getStream().close();
+		//}
 	}
 
 	public void onHTTPSessionDestroy(IHTTPStreamerSession httpSession) {
 		getLogger().info("onHTTPSessionDestroy: " + httpSession.getSessionId());
+	}
+	
+	public void onHTTPCupertinoStreamingSessionCreate(HTTPStreamerSessionCupertino httpCupertinoStreamingSession) {
+		getLogger().info("onHTTPCupertinoStreamingSessionCreate: " + httpCupertinoStreamingSession.getSessionId());
+		
+		
+		tokenValidate = new TokenValidate(httpCupertinoStreamingSession.getQueryStr(), httpCupertinoStreamingSession.getReferrer(), httpCupertinoStreamingSession.getIpAddress());
+		if (!tokenValidate.validate()) {
+			httpCupertinoStreamingSession.getStream().close();
+		}
 	}
 
 }

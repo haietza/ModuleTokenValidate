@@ -2,6 +2,7 @@ package edu.appstate.lts;
 
 import com.wowza.wms.module.*;
 import com.wowza.wms.client.*;
+import com.wowza.wms.httpstreamer.model.IHTTPStreamerSession;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -19,23 +20,39 @@ public class TokenValidate extends ModuleBase {
 	private String wsValidMinutes;
 	private String wsIpAddress;
 	
+	/*
 	public TokenValidate(IClient client) {
 		startDate = new Date();
-		// token = client.getQueryStr();
+		token = client.getQueryStr();
 		url = client.getPageUrl();
 		ipAddress = client.getIp();
-		callWebService();
+		callWebService(token);
+	}
+	
+	public TokenValidate(IHTTPStreamerSession httpSession) {
+		startDate = new Date();
+		token = httpSession.getQueryStr();
+		url = httpSession.getReferrer();
+		ipAddress = httpSession.getIpAddress();
+		callWebService(token);
+	}
+	*/
+	
+	public TokenValidate(String token, String url, String ipAddress) {
+		this.token = token;
+		this.url = url;
+		this.ipAddress = ipAddress;
 	}
 	
 	// Need to figure out how to call web service from
 	// http://ltsdev04.lts.appstate.edu/resolvetoken.php
-	private void callWebService() {
+	private void callWebService(String token) {
 		mediaHash = "aabbccddeeffgghhiijjkkllmmnnooppqqrrsstt";
 		wsApplication = "appstate";
 		wsUrl = "http://www.appstate.edu/~meltonml/video/flowtest.html";
 		wsDateIssued = "2015-08-29T15:00:00-04:00";
 		wsValidMinutes = "5";
-		wsIpAddress = "10.0.2.15";
+		wsIpAddress = "10.0.2.2";
 	}
 	
 	// App validation tested to work when tested with 
