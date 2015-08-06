@@ -21,23 +21,13 @@ public class ModuleTokenValidate extends ModuleBase {
 		super();
 	}
 
-	public void onAppStart(IApplicationInstance appInstance) {
-		String fullname = appInstance.getApplication().getName() + "/" + appInstance.getName();
-		getLogger().info("onAppStart: " + fullname);
-	}
-
-	public void onAppStop(IApplicationInstance appInstance) {
-		String fullname = appInstance.getApplication().getName() + "/" + appInstance.getName();
-		getLogger().info("onAppStop: " + fullname);
-	}
-
 	public void onConnect(IClient client, RequestFunction function, AMFDataList params) {
 		getLogger().info("onConnect: " + client.getClientId());
 		
-		//tokenValidate = new TokenValidate(client);		
-		//if (!tokenValidate.validate()) {
-			//client.rejectConnection("Invalid token.");
-		//}
+		tokenValidate = new TokenValidate(client);		
+		if (!tokenValidate.validate()) {
+			client.rejectConnection("Invalid token.");
+		}
 		// else {
 			// get video from Mensch store via token/hash
 		// }
@@ -57,13 +47,12 @@ public class ModuleTokenValidate extends ModuleBase {
 
 	public void onStreamCreate(IMediaStream stream) {
 		getLogger().info("onStreamCreate: " + stream.getSrc());
-		getLogger().info("Stream Query: " + stream.getClient().getQueryStr());
 		
-		//tokenValidate = new TokenValidate(stream.getClient());	
-		tokenValidate = new TokenValidate(stream.getClient().getQueryStr(), stream.getClient().getPageUrl(), stream.getClient().getIp());
-		if (!tokenValidate.validate()) {
-			stream.close();
-		}
+		//tokenValidate = new TokenValidate(stream.getClient());		
+		//if (!tokenValidate.validate()) {
+			//stream.getClient().setShutdownClient(true);
+			//stream.getClient().shutdownClient();
+		//}
 	}
 
 	public void onStreamDestroy(IMediaStream stream) {
@@ -72,29 +61,20 @@ public class ModuleTokenValidate extends ModuleBase {
 
 	public void onHTTPSessionCreate(IHTTPStreamerSession httpSession) {
 		getLogger().info("onHTTPSessionCreate: " + httpSession.getSessionId());
-		getLogger().info("HTTP Query: " + httpSession.getQueryStr());
-		getLogger().info("Referrer: " + httpSession.getReferrer());
-		getLogger().info("IP: " + httpSession.getIpAddress());
+		//getLogger().info("HTTP Query: " + httpSession.getQueryStr());
+		//getLogger().info("Referrer: " + httpSession.getReferrer());
+		//getLogger().info("IP: " + httpSession.getIpAddress());
 		
-		//tokenValidate = new TokenValidate(httpSession);
-		//tokenValidate = new TokenValidate(httpSession.getQueryStr(), httpSession.getReferrer(), httpSession.getIpAddress());
-		//if (!tokenValidate.validate()) {
-			//httpSession.getStream().close();
-		//}
+		tokenValidate = new TokenValidate(httpSession);
+		if (!tokenValidate.validate()) {
+			//httpSession.rejectSession();
+			httpSession.getStream().getClient().setShutdownClient(true);
+			httpSession.getStream().getClient().shutdownClient();
+		}
 	}
 
 	public void onHTTPSessionDestroy(IHTTPStreamerSession httpSession) {
 		getLogger().info("onHTTPSessionDestroy: " + httpSession.getSessionId());
-	}
-	
-	public void onHTTPCupertinoStreamingSessionCreate(HTTPStreamerSessionCupertino httpCupertinoStreamingSession) {
-		getLogger().info("onHTTPCupertinoStreamingSessionCreate: " + httpCupertinoStreamingSession.getSessionId());
-		
-		
-		tokenValidate = new TokenValidate(httpCupertinoStreamingSession.getQueryStr(), httpCupertinoStreamingSession.getReferrer(), httpCupertinoStreamingSession.getIpAddress());
-		if (!tokenValidate.validate()) {
-			httpCupertinoStreamingSession.getStream().close();
-		}
 	}
 
 }

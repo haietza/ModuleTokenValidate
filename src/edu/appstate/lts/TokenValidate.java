@@ -1,6 +1,7 @@
 package edu.appstate.lts;
 
 import com.wowza.wms.module.*;
+import com.wowza.wms.stream.IMediaStream;
 import com.wowza.wms.client.*;
 import com.wowza.wms.httpstreamer.model.IHTTPStreamerSession;
 
@@ -20,7 +21,6 @@ public class TokenValidate extends ModuleBase {
 	private String wsValidMinutes;
 	private String wsIpAddress;
 	
-	/*
 	public TokenValidate(IClient client) {
 		startDate = new Date();
 		token = client.getQueryStr();
@@ -36,13 +36,6 @@ public class TokenValidate extends ModuleBase {
 		ipAddress = httpSession.getIpAddress();
 		callWebService(token);
 	}
-	*/
-	
-	public TokenValidate(String token, String url, String ipAddress) {
-		this.token = token;
-		this.url = url;
-		this.ipAddress = ipAddress;
-	}
 	
 	// Need to figure out how to call web service from
 	// http://ltsdev04.lts.appstate.edu/resolvetoken.php
@@ -52,11 +45,10 @@ public class TokenValidate extends ModuleBase {
 		wsUrl = "http://www.appstate.edu/~meltonml/video/flowtest.html";
 		wsDateIssued = "2015-08-29T15:00:00-04:00";
 		wsValidMinutes = "5";
-		wsIpAddress = "10.0.2.2";
+		wsIpAddress = "127.0.0.1";
 	}
 	
-	// App validation tested to work when tested with 
-	// text in URL after "http://www." and before ".edu"
+	// App validation tested with text in URL after "http://www." and before ".edu"
 	private boolean validateApp() {
 		String newUrl = url.substring(7);
 		if (newUrl.substring(0,4).equals("www.")) {
@@ -64,15 +56,15 @@ public class TokenValidate extends ModuleBase {
 		}
 		int endIndex = newUrl.indexOf(".edu");
 		application = newUrl.substring(0, endIndex);
+		getLogger().info(application + " = " + wsApplication + " : " + application.equals(wsApplication));
 		return application.equals(wsApplication);
 	}
 	
-	// URL validation tested to work.
 	private boolean validateUrl() {
+		getLogger().info(url + " = " + wsUrl + " : " + url.equals(wsUrl));
 		return url.equals(wsUrl);
 	}
 	
-	// Date validation tested to work.
 	private boolean validateDate() {
 		Calendar validDate = Calendar.getInstance();
 		String[] split = wsDateIssued.split("-|:|T");
@@ -87,11 +79,12 @@ public class TokenValidate extends ModuleBase {
 		validDate.add(validDate.get(Calendar.MINUTE), Integer.parseInt(wsValidMinutes));
 		
 		Date wsDate = validDate.getTime();
+		getLogger().info(startDate + " before " + wsDate + " : " + wsDate.after(startDate));
 		return wsDate.after(startDate);
 	}
 	
-	// IP address validation tested to work.
 	private boolean validateIpAddress() {
+		getLogger().info(ipAddress + " = " + wsIpAddress + " : " + ipAddress.equals(wsIpAddress));
 		return ipAddress.equals(wsIpAddress);
 	}
 	
