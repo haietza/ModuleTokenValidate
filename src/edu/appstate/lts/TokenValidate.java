@@ -1,12 +1,24 @@
 package edu.appstate.lts;
 
 import com.wowza.wms.module.*;
-import com.wowza.wms.stream.IMediaStream;
+//import com.sun.org.apache.xml.internal.security.utils.XPathFactory;
 import com.wowza.wms.client.*;
 import com.wowza.wms.httpstreamer.model.IHTTPStreamerSession;
 
+import java.net.URL;
 import java.util.Calendar;
 import java.util.Date;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpression;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
+
+import javax.xml.xpath.XPathFactory;
 
 public class TokenValidate extends ModuleBase {
 	private String token;
@@ -40,12 +52,33 @@ public class TokenValidate extends ModuleBase {
 	// Need to figure out how to call web service from
 	// http://ltsdev04.lts.appstate.edu/resolvetoken.php
 	private void callWebService(String token) {
-		mediaHash = "aabbccddeeffgghhiijjkkllmmnnooppqqrrsstt";
-		wsApplication = "appstate";
-		wsUrl = "http://www.appstate.edu/~meltonml/video/flowtest.html";
-		wsDateIssued = "2015-08-29T15:00:00-04:00";
-		wsValidMinutes = "5";
-		wsIpAddress = "127.0.0.1";
+		//mediaHash = "aabbccddeeffgghhiijjkkllmmnnooppqqrrsstt";
+		//wsApplication = "appstate";
+		//wsUrl = "http://www.appstate.edu/~meltonml/video/flowtest.html";
+		//wsDateIssued = "2015-08-29T15:00:00-04:00";
+		//wsValidMinutes = "5";
+		//wsIpAddress = "127.0.0.1";
+		
+		try {
+			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+			DocumentBuilder builder = factory.newDocumentBuilder();
+			Document doc = builder.parse(new URL("http://ltsdev04.lts.appstate.edu/resolvetoken.php?token=" + token).openConnection().getInputStream());
+			doc.getDocumentElement().normalize();
+			XPath xpath = XPathFactory.newInstance().newXPath();
+			// May need to revise compile expression if all nodes won't always be present or in same order.
+			XPathExpression expr = xpath.compile("//mensch-access-ticket/*/text()");
+			Object result = expr.evaluate(doc,  XPathConstants.NODESET);
+			NodeList nodes = (NodeList) result;
+			
+			wsDateIssued = nodes.item(1).getNodeValue();
+			wsValidMinutes = nodes.item(2).getNodeValue();
+			wsApplication = nodes.item(3).getNodeValue();
+			wsUrl = nodes.item(4).getNodeValue();
+			wsIpAddress = nodes.item(5).getNodeValue();
+			mediaHash = nodes.item(6).getNodeValue();
+		} catch (Exception e) {
+			e.getMessage();
+		}
 	}
 	
 	// App validation tested with text in URL after "http://www." and before ".edu"
@@ -62,6 +95,12 @@ public class TokenValidate extends ModuleBase {
 	
 	private boolean validateUrl() {
 		getLogger().info(url + " = " + wsUrl + " : " + url.equals(wsUrl));
+		if (url.substring(7, 11).equals("www.")) {
+			url = url.substring(0, 7) + url.substring(11);
+		}
+		if (wsUrl.substring(7, 11).equals("www.")) {
+			wsUrl = wsUrl.substring(0, 7) + wsUrl.substring(11);
+		}
 		return url.equals(wsUrl);
 	}
 	

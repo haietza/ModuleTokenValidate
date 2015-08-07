@@ -68,8 +68,9 @@ public class ModuleTokenValidate extends ModuleBase {
 		tokenValidate = new TokenValidate(httpSession);
 		if (!tokenValidate.validate()) {
 			//httpSession.rejectSession();
-			httpSession.getStream().getClient().setShutdownClient(true);
-			httpSession.getStream().getClient().shutdownClient();
+			//httpSession.getStream().getClient().setShutdownClient(true);
+			//httpSession.getStream().getClient().shutdownClient();
+			httpSession.shutdown();
 		}
 	}
 
