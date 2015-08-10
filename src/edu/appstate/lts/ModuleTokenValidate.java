@@ -26,7 +26,8 @@ public class ModuleTokenValidate extends ModuleBase {
 		
 		tokenValidate = new TokenValidate(client);		
 		if (!tokenValidate.validate()) {
-			client.rejectConnection("Invalid token.");
+			client.rejectConnection();
+			client.shutdownClient();
 		}
 		// else {
 			// get video from Mensch store via token/hash
@@ -61,15 +62,10 @@ public class ModuleTokenValidate extends ModuleBase {
 
 	public void onHTTPSessionCreate(IHTTPStreamerSession httpSession) {
 		getLogger().info("onHTTPSessionCreate: " + httpSession.getSessionId());
-		//getLogger().info("HTTP Query: " + httpSession.getQueryStr());
-		//getLogger().info("Referrer: " + httpSession.getReferrer());
-		//getLogger().info("IP: " + httpSession.getIpAddress());
 		
 		tokenValidate = new TokenValidate(httpSession);
 		if (!tokenValidate.validate()) {
-			//httpSession.rejectSession();
-			//httpSession.getStream().getClient().setShutdownClient(true);
-			//httpSession.getStream().getClient().shutdownClient();
+			httpSession.rejectSession();
 			httpSession.shutdown();
 		}
 	}

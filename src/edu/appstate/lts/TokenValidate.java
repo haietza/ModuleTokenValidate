@@ -49,16 +49,7 @@ public class TokenValidate extends ModuleBase {
 		callWebService(token);
 	}
 	
-	// Need to figure out how to call web service from
-	// http://ltsdev04.lts.appstate.edu/resolvetoken.php
 	private void callWebService(String token) {
-		//mediaHash = "aabbccddeeffgghhiijjkkllmmnnooppqqrrsstt";
-		//wsApplication = "appstate";
-		//wsUrl = "http://www.appstate.edu/~meltonml/video/flowtest.html";
-		//wsDateIssued = "2015-08-29T15:00:00-04:00";
-		//wsValidMinutes = "5";
-		//wsIpAddress = "127.0.0.1";
-		
 		try {
 			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 			DocumentBuilder builder = factory.newDocumentBuilder();
@@ -93,14 +84,15 @@ public class TokenValidate extends ModuleBase {
 		return application.equals(wsApplication);
 	}
 	
+	// www. removed from URLs before validation
 	private boolean validateUrl() {
-		getLogger().info(url + " = " + wsUrl + " : " + url.equals(wsUrl));
 		if (url.substring(7, 11).equals("www.")) {
 			url = url.substring(0, 7) + url.substring(11);
 		}
 		if (wsUrl.substring(7, 11).equals("www.")) {
 			wsUrl = wsUrl.substring(0, 7) + wsUrl.substring(11);
 		}
+		getLogger().info(url + " = " + wsUrl + " : " + url.equals(wsUrl));
 		return url.equals(wsUrl);
 	}
 	
