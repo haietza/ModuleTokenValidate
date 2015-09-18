@@ -1,40 +1,35 @@
 package edu.appstate.lts;
 
 import com.wowza.wms.module.*;
-//import com.sun.org.apache.xml.internal.security.utils.XPathFactory;
 import com.wowza.wms.client.*;
 import com.wowza.wms.httpstreamer.model.IHTTPStreamerSession;
 
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.URL;
-import java.util.Calendar;
-import java.util.Date;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathExpression;
 
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-
-import javax.xml.xpath.XPathFactory;
 
 public class TokenValidate extends ModuleBase {
 	private String token;
 	private String application;
 	private String url;
-	private Date startDate;
 	private String ipAddress;
-	private String mediaHash;
+	private String hashValue;
 	private String wsApplication;
 	private String wsUrl;
-	private String wsDateIssued;
-	private String wsValidMinutes;
 	private String wsIpAddress;
 	
 	public TokenValidate(IClient client) {
-		startDate = new Date();
+		//startDate = new Date();
 		token = client.getQueryStr();
 		url = client.getPageUrl();
 		ipAddress = client.getIp();
@@ -42,7 +37,7 @@ public class TokenValidate extends ModuleBase {
 	}
 	
 	public TokenValidate(IHTTPStreamerSession httpSession) {
-		startDate = new Date();
+		//startDate = new Date();
 		token = httpSession.getQueryStr();
 		url = httpSession.getReferrer();
 		ipAddress = httpSession.getIpAddress();
@@ -50,23 +45,23 @@ public class TokenValidate extends ModuleBase {
 	}
 	
 	private void callWebService(String token) {
+		
 		try {
 			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 			DocumentBuilder builder = factory.newDocumentBuilder();
-			Document doc = builder.parse(new URL("http://ltsdev04.lts.appstate.edu/resolvetoken.php?token=" + token).openConnection().getInputStream());
+			Document doc = builder.parse(new URL("http://lts6.lts.appstate.edu/mensch-tickets/ticket/" + token).openConnection().getInputStream());
 			doc.getDocumentElement().normalize();
-			XPath xpath = XPathFactory.newInstance().newXPath();
-			// May need to revise compile expression if all nodes won't always be present or in same order.
-			XPathExpression expr = xpath.compile("//mensch-access-ticket/*/text()");
-			Object result = expr.evaluate(doc,  XPathConstants.NODESET);
-			NodeList nodes = (NodeList) result;
-			
-			wsDateIssued = nodes.item(1).getNodeValue();
-			wsValidMinutes = nodes.item(2).getNodeValue();
-			wsApplication = nodes.item(3).getNodeValue();
-			wsUrl = nodes.item(4).getNodeValue();
-			wsIpAddress = nodes.item(5).getNodeValue();
-			mediaHash = nodes.item(6).getNodeValue();
+			NodeList nList = doc.getElementsByTagName("Ticket");
+			for (int i = 0; i < nList.getLength(); i++) {
+				Node nNode = nList.item(i);
+				if (nNode.getNodeType() == Node.ELEMENT_NODE) {
+					Element eElement = (Element) nNode;
+					hashValue = eElement.getElementsByTagName("HashValue").item(0).getTextContent();
+					wsIpAddress = eElement.getElementsByTagName("IpAddr").item(0).getTextContent();
+					wsApplication = eElement.getElementsByTagName("Issuer").item(0).getTextContent();
+					wsUrl = eElement.getElementsByTagName("Url").item(0).getTextContent();
+				}
+			}
 		} catch (Exception e) {
 			e.getMessage();
 		}
@@ -96,30 +91,52 @@ public class TokenValidate extends ModuleBase {
 		return url.equals(wsUrl);
 	}
 	
-	private boolean validateDate() {
-		Calendar validDate = Calendar.getInstance();
-		String[] split = wsDateIssued.split("-|:|T");
-		int wsYear = Integer.parseInt(split[0]);
-		int wsMonth = Integer.parseInt(split[1]);
-		int wsDay = Integer.parseInt(split[2]);
-		int wsHour = Integer.parseInt(split[3]);
-		int wsMinutes = Integer.parseInt(split[4]);
-		int wsSeconds = Integer.parseInt(split[5]);
-		
-		validDate.set(wsYear, wsMonth - 1, wsDay, wsHour, wsMinutes, wsSeconds);
-		validDate.add(validDate.get(Calendar.MINUTE), Integer.parseInt(wsValidMinutes));
-		
-		Date wsDate = validDate.getTime();
-		getLogger().info(startDate + " before " + wsDate + " : " + wsDate.after(startDate));
-		return wsDate.after(startDate);
-	}
-	
 	private boolean validateIpAddress() {
 		getLogger().info(ipAddress + " = " + wsIpAddress + " : " + ipAddress.equals(wsIpAddress));
 		return ipAddress.equals(wsIpAddress);
 	}
 	
 	public boolean validate() {
-		return validateApp() && validateUrl() && validateDate() && validateIpAddress();
+		return validateApp() && validateUrl() && validateIpAddress();
+	}
+	
+	public String getFileName() {
+		String fileName = null;
+		File file = new File("C:/Program Files (x86)/Wowza Media Systems/Wowza Streaming Engine 4.2.0/content/" + hashValue + ".mp4");
+		BufferedInputStream in = null;
+		FileOutputStream fos = null;
+		if (file.exists()) {
+			fileName = file.getName();
+		}
+		else if (!file.exists()) {
+			try {
+				in = new BufferedInputStream(new URL("http://lts6.lts.appstate.edu/mensch-store-web/artifact/" + hashValue).openStream());
+				fos = new FileOutputStream(file, true);
+				int read = 0;
+				byte[] bytes = new byte[1024];
+				while ((read = in.read(bytes, 0, 1024)) != -1) {
+					fos.write(bytes, 0, read);
+				}
+				fileName = hashValue + ".mp4";
+			} catch (Exception e) {
+				e.printStackTrace();
+			} finally {
+				if (in != null) {
+					try {
+						in.close();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
+				if (fos != null) {
+					try {
+						fos.close();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+		}
+		return fileName;
 	}
 }
