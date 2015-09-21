@@ -6,38 +6,43 @@ import com.wowza.wms.httpstreamer.model.IHTTPStreamerSession;
 
 import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 public class TokenValidate extends ModuleBase {
 	private String token;
-	private String application;
+	//private String application;
 	private String url;
 	private String ipAddress;
 	private String hashValue;
-	private String wsApplication;
+	//private String wsApplication;
 	private String wsUrl;
 	private String wsIpAddress;
 	
 	public TokenValidate(IClient client) {
-		//startDate = new Date();
 		token = client.getQueryStr();
+		getLogger().info("Token: " + token);
 		url = client.getPageUrl();
+		getLogger().info("URL: " + url);
 		ipAddress = client.getIp();
+		getLogger().info("IP: " + ipAddress);
 		callWebService(token);
 	}
 	
 	public TokenValidate(IHTTPStreamerSession httpSession) {
-		//startDate = new Date();
 		token = httpSession.getQueryStr();
 		url = httpSession.getReferrer();
 		ipAddress = httpSession.getIpAddress();
@@ -58,16 +63,26 @@ public class TokenValidate extends ModuleBase {
 					Element eElement = (Element) nNode;
 					hashValue = eElement.getElementsByTagName("HashValue").item(0).getTextContent();
 					wsIpAddress = eElement.getElementsByTagName("IpAddr").item(0).getTextContent();
-					wsApplication = eElement.getElementsByTagName("Issuer").item(0).getTextContent();
+					//wsApplication = eElement.getElementsByTagName("Issuer").item(0).getTextContent();
 					wsUrl = eElement.getElementsByTagName("Url").item(0).getTextContent();
 				}
 			}
-		} catch (Exception e) {
-			e.getMessage();
+			getLogger().info("WS hash value: " + hashValue);
+			getLogger().info("WS IP: " + wsIpAddress);
+			getLogger().info("WS URL: " + wsUrl);
+		} catch (MalformedURLException e) {
+			System.out.println("Malformed URL: " + e.getMessage());
+		} catch (ParserConfigurationException e) {
+			System.out.println("Parser configuration: " + e.getMessage());
+		} catch (IOException e) {
+			System.out.println("IOException: " + e.getMessage());
+		} catch (SAXException e) {
+			System.out.println("SAXException: " + e.getMessage());
 		}
 	}
 	
 	// App validation tested with text in URL after "http://www." and before ".edu"
+	/*
 	private boolean validateApp() {
 		String newUrl = url.substring(7);
 		if (newUrl.substring(0,4).equals("www.")) {
@@ -78,6 +93,7 @@ public class TokenValidate extends ModuleBase {
 		getLogger().info(application + " = " + wsApplication + " : " + application.equals(wsApplication));
 		return application.equals(wsApplication);
 	}
+	*/
 	
 	// www. removed from URLs before validation
 	private boolean validateUrl() {
@@ -97,7 +113,8 @@ public class TokenValidate extends ModuleBase {
 	}
 	
 	public boolean validate() {
-		return validateApp() && validateUrl() && validateIpAddress();
+		return validateUrl() && validateIpAddress();
+		// && validateApp()
 	}
 	
 	public String getFileName() {
@@ -106,9 +123,9 @@ public class TokenValidate extends ModuleBase {
 		BufferedInputStream in = null;
 		FileOutputStream fos = null;
 		if (file.exists()) {
-			fileName = file.getName();
+			fileName = "mp4:" + file.getName();
 		}
-		else if (!file.exists()) {
+		else {
 			try {
 				in = new BufferedInputStream(new URL("http://lts6.lts.appstate.edu/mensch-store-web/artifact/" + hashValue).openStream());
 				fos = new FileOutputStream(file, true);
@@ -117,22 +134,26 @@ public class TokenValidate extends ModuleBase {
 				while ((read = in.read(bytes, 0, 1024)) != -1) {
 					fos.write(bytes, 0, read);
 				}
-				fileName = hashValue + ".mp4";
-			} catch (Exception e) {
-				e.printStackTrace();
+				fileName = "mp4:" + hashValue + ".mp4";
+			} catch (MalformedURLException e) {
+				System.out.println("Malformed URL: " + e.getMessage());
+			} catch (FileNotFoundException e) {
+				System.out.println("File not found: " + e.getMessage());
+			} catch (IOException e) {
+				System.out.println("IO exception: " + e.getMessage());
 			} finally {
 				if (in != null) {
 					try {
 						in.close();
 					} catch (IOException e) {
-						e.printStackTrace();
+						System.out.println("IO exception: " + e.getMessage());
 					}
 				}
 				if (fos != null) {
 					try {
 						fos.close();
 					} catch (IOException e) {
-						e.printStackTrace();
+						System.out.println("IO exception: " + e.getMessage());
 					}
 				}
 			}
