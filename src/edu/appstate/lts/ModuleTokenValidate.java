@@ -136,17 +136,19 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 		appInstance.setStreamNameAliasProvider(this);
 	}
 
+	// Flash player connects
 	public void onConnect(IClient client, RequestFunction function, AMFDataList params) {
 		getLogger().info("onConnect: " + client.getClientId());
 	}
 	
+	// HLS or smooth streaming connects
 	public void onHTTPSessionCreate(IHTTPStreamerSession httpSession) {
 		getLogger().info("onHTTPSessionCreate: " + httpSession.getSessionId());
 	}
 	
 	@Override
 	public String resolvePlayAlias(IApplicationInstance appInstance, String name, IClient client) {
-		getLogger().info("resolvePlayAlias Wowza values: Token = " + client.getQueryStr() + ", URL = " + client.getPageUrl() + ", IP = " + client.getIp() + ", Name = " + name);
+		getLogger().info("RTMP resolvePlayAlias Wowza values: Token = " + client.getQueryStr() + ", URL = " + client.getPageUrl() + ", IP = " + client.getIp() + ", Name = " + name);
 		
 		try {
 			return validateToken(client.getQueryStr(), client.getPageUrl(), client.getIp());
@@ -160,6 +162,7 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 	@Override
 	public String resolvePlayAlias(IApplicationInstance appInstance, String name, IHTTPStreamerSession httpSession){
 		// Resolve play alias for HTTP streaming
+		getLogger().info("HTTP resolvePlayAlias Wowza values: Token = " + httpSession.getQueryStr() + ", URL = " + httpSession.getReferrer() + ", IP = " + httpSession.getIpAddress());
 		try {
 			return validateToken(httpSession.getQueryStr(), httpSession.getReferrer(), httpSession.getIpAddress());
 		} catch (Exception e) {
