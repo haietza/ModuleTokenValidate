@@ -37,7 +37,7 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 		super();
 	}
 	
-	private String validateToken(String token, String url, String ipAddress) {
+	private String validateToken(IApplicationInstance appInstance, String token, String url, String ipAddress) {
 		String hashValue = null;
 		String wsApplication;
 		String wsUrl = null;
@@ -80,15 +80,17 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 		
 		// Validate token
 		// Get file and/or filename from Wowza cache or Mensch store 
-		String fileName = null;
 		getLogger().info("Validate URL: Wowza URL = " + url + " equals web service URL =  " + wsUrl + ": " + url.equalsIgnoreCase(wsUrl));
 		getLogger().info("Validate IP: Wowza IP = " + ipAddress + " equals web service IP = " + wsIpAddress + ": " + ipAddress.equalsIgnoreCase(wsIpAddress));
+		String fileName = "mp4:mensch/access-denied.mp4";
 		if (url.equalsIgnoreCase(wsUrl) && ipAddress.equalsIgnoreCase(wsIpAddress)) {
-			File file = new File("C:/Program Files (x86)/Wowza Media Systems/Wowza Streaming Engine 4.2.0/content/" + hashValue + ".mp4");
+			getLogger().info("Stream storage directory: " + appInstance.getStreamStorageDir());
+			//File file = new File("C:/Program Files (x86)/Wowza Media Systems/Wowza Streaming Engine 4.2.0/content/" + hashValue + ".mp4");
+			File file = new File(appInstance.getStreamStorageDir() + "/" + hashValue + ".mp4");
 			BufferedInputStream in = null;
 			FileOutputStream fos = null;
 			if (file.exists()) {
-				fileName = "mp4:" + file.getName();
+				fileName = "mp4:" + appInstance.getApplication().getName() + "/" + file.getName();
 				getLogger().info("Cache file name: " + fileName);
 			}
 			else {
@@ -100,7 +102,7 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 					while ((read = in.read(bytes, 0, 1024)) != -1) {
 						fos.write(bytes, 0, read);
 					}
-					fileName = "mp4:" + hashValue + ".mp4";
+					fileName = "mp4:" + appInstance.getApplication().getName() + "/" + hashValue + ".mp4";
 					getLogger().info("Downloaded file name: " + fileName);
 				} catch (MalformedURLException e) {
 					getLogger().info("Malformed URL: " + e.getMessage());
@@ -135,52 +137,45 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 		getLogger().info("onAppStart: " + fullname);
 		appInstance.setStreamNameAliasProvider(this);
 	}
-
-	// Flash player connects
-	public void onConnect(IClient client, RequestFunction function, AMFDataList params) {
-		getLogger().info("onConnect: " + client.getClientId());
-	}
-	
-	// HLS or smooth streaming connects
-	public void onHTTPSessionCreate(IHTTPStreamerSession httpSession) {
-		getLogger().info("onHTTPSessionCreate: " + httpSession.getSessionId());
-	}
 	
 	@Override
 	public String resolvePlayAlias(IApplicationInstance appInstance, String name, IClient client) {
 		getLogger().info("RTMP resolvePlayAlias Wowza values: Token = " + client.getQueryStr() + ", URL = " + client.getPageUrl() + ", IP = " + client.getIp() + ", Name = " + name);
-		
+		String fileName = "mp4:mensch/access-denied.mp4";
 		try {
-			return validateToken(client.getQueryStr(), client.getPageUrl(), client.getIp());
+			fileName = validateToken(appInstance, client.getQueryStr(), client.getPageUrl(), client.getIp());
 		} catch (Exception e) {
-			getLogger().info("Validate token exception: " + e.getMessage());
+			getLogger().info("Validate token RTMP exception: " + e.getMessage());
 			client.rejectConnection(e.getMessage());
-			return null;
+			client.shutdownClient();
+			return fileName;
 		}
+		return fileName;
 	}
 	
 	@Override
 	public String resolvePlayAlias(IApplicationInstance appInstance, String name, IHTTPStreamerSession httpSession){
 		// Resolve play alias for HTTP streaming
 		getLogger().info("HTTP resolvePlayAlias Wowza values: Token = " + httpSession.getQueryStr() + ", URL = " + httpSession.getReferrer() + ", IP = " + httpSession.getIpAddress());
+		String fileName = "mp4:mensch/access-denied.mp4";
 		try {
-			return validateToken(httpSession.getQueryStr(), httpSession.getReferrer(), httpSession.getIpAddress());
+			fileName = validateToken(appInstance, httpSession.getQueryStr(), httpSession.getReferrer(), httpSession.getIpAddress());
 		} catch (Exception e) {
+			getLogger().info("Validate token HTTP exception: " + e.getMessage());
 			httpSession.rejectSession();
 			httpSession.shutdown();
-			return null;
+			return fileName;
 		}
+		return fileName;
 	}
 	
 	@Override
 	public String resolvePlayAlias(IApplicationInstance appInstance, String name) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public String resolveStreamAlias(IApplicationInstance appInstance, String name) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
