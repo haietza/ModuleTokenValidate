@@ -58,7 +58,8 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 	 */
 	private String validateToken(IApplicationInstance appInstance, String token, String url, String ipAddress) 
 	{
-		String hashValue = null;
+		String mediaHashValue = null;
+		String scriptHashValue = null;
 		//String wsApplication;
 		String wsUrl = null;
 		String wsIpAddress = null;
@@ -83,14 +84,15 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 				Node nNode = nList.item(i);
 				if (nNode.getNodeType() == Node.ELEMENT_NODE) {
 					Element eElement = (Element) nNode;
-					hashValue = eElement.getElementsByTagName("HashValue").item(0).getTextContent();
+					mediaHashValue = eElement.getElementsByTagName("MediaHashValue").item(0).getTextContent();
+					scriptHashValue = eElement.getElementsByTagName("ScriptHashValue").item(0).getTextContent();
 					wsIpAddress = eElement.getElementsByTagName("IpAddr").item(0).getTextContent();
 					//wsApplication = eElement.getElementsByTagName("Issuer").item(0).getTextContent();
 					wsUrl = eElement.getElementsByTagName("Url").item(0).getTextContent();
 				}
 			}
 			
-			getLogger().info("Values received from web service: HashValue = " + hashValue + ", IP = " + wsIpAddress + ", URL = " + wsUrl);
+			getLogger().info("Values received from web service: MediaHashValue = " + mediaHashValue + ", ScriptHashValue = " + scriptHashValue + ", IP = " + wsIpAddress + ", URL = " + wsUrl);
 		
 		} 
 		catch (MalformedURLException e) 
@@ -120,27 +122,31 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 		{
 			getLogger().info("Stream storage directory: " + appInstance.getStreamStorageDir());
 			
-			File file = new File(appInstance.getStreamStorageDir() + "/" + hashValue + ".mp4");
+			File mediaFile = new File(appInstance.getStreamStorageDir() + "/" + mediaHashValue + ".mp4");
+			if (scriptHashValue != null)
+			{
+				File scriptFile = new File(appInstance.getStreamStorageDir() + "/" + scriptHashValue + ".srt");
+			}
 			BufferedInputStream in = null;
 			FileOutputStream fos = null;
-			if (file.exists()) 
+			if (mediaFile.exists()) 
 			{
-				fileName = "mp4:" + appInstance.getApplication().getName() + "/" + file.getName();
+				fileName = "mp4:" + appInstance.getApplication().getName() + "/" + mediaFile.getName();
 				getLogger().info("Cache file name: " + fileName);
 			}
 			else 
 			{
 				try 
 				{
-					in = new BufferedInputStream(new URL("http://lts6.lts.appstate.edu/mensch-store-web/artifact/" + hashValue).openStream());
-					fos = new FileOutputStream(file, true);
+					in = new BufferedInputStream(new URL("http://lts6.lts.appstate.edu/mensch-store-web/artifact/" + mediaHashValue).openStream());
+					fos = new FileOutputStream(mediaFile, true);
 					int read = 0;
 					byte[] bytes = new byte[1024];
 					while ((read = in.read(bytes, 0, 1024)) != -1) 
 					{
 						fos.write(bytes, 0, read);
 					}
-					fileName = "mp4:" + appInstance.getApplication().getName() + "/" + hashValue + ".mp4";
+					fileName = "mp4:" + appInstance.getApplication().getName() + "/" + mediaHashValue + ".mp4";
 					
 					getLogger().info("Downloaded file name: " + fileName);
 				} 
