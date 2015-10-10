@@ -17,6 +17,8 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Date;
+import java.util.List;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -37,7 +39,7 @@ import org.xml.sax.SAXException;
 
 public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameAliasProvider2 
 {
-	
+	private int timeToLive = 30;
 	/**
 	 * Constructor calls ModuleBase constructor.
 	 */
@@ -123,12 +125,9 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 			getLogger().info("Stream storage directory: " + appInstance.getStreamStorageDir());
 			
 			File mediaFile = new File(appInstance.getStreamStorageDir() + "/" + mediaHashValue + ".mp4");
-			if (scriptHashValue != null)
-			{
-				File scriptFile = new File(appInstance.getStreamStorageDir() + "/" + scriptHashValue + ".srt");
-			}
-			BufferedInputStream in = null;
-			FileOutputStream fos = null;
+			
+			BufferedInputStream mediaIn = null;
+			FileOutputStream mediaFos = null;
 			if (mediaFile.exists()) 
 			{
 				fileName = "mp4:" + appInstance.getApplication().getName() + "/" + mediaFile.getName();
@@ -138,13 +137,13 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 			{
 				try 
 				{
-					in = new BufferedInputStream(new URL("http://lts6.lts.appstate.edu/mensch-store-web/artifact/" + mediaHashValue).openStream());
-					fos = new FileOutputStream(mediaFile, true);
+					mediaIn = new BufferedInputStream(new URL("http://lts6.lts.appstate.edu/mensch-store-web/artifact/" + mediaHashValue).openStream());
+					mediaFos = new FileOutputStream(mediaFile, true);
 					int read = 0;
 					byte[] bytes = new byte[1024];
-					while ((read = in.read(bytes, 0, 1024)) != -1) 
+					while ((read = mediaIn.read(bytes, 0, 1024)) != -1) 
 					{
-						fos.write(bytes, 0, read);
+						mediaFos.write(bytes, 0, read);
 					}
 					fileName = "mp4:" + appInstance.getApplication().getName() + "/" + mediaHashValue + ".mp4";
 					
@@ -164,26 +163,84 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 				} 
 				finally 
 				{
-					if (in != null) 
+					if (mediaIn != null) 
 					{
 						try 
 						{
-							in.close();
+							mediaIn.close();
 						} 
 						catch (IOException e) 
 						{
 							getLogger().info("IN close IO exception: " + e.getMessage());
 						}
 					}
-					if (fos != null) 
+					if (mediaFos != null) 
 					{
 						try 
 						{
-							fos.close();
+							mediaFos.close();
 						} 
 						catch (IOException e) 
 						{
 							getLogger().info("FOS close IO exception: " + e.getMessage());
+						}
+					}
+				}
+			}
+			
+			if (scriptHashValue != null)
+			{
+				File scriptFile = new File(appInstance.getStreamStorageDir() + "/" + mediaHashValue + ".srt");
+				BufferedInputStream scriptIn = null;
+				FileOutputStream scriptFos = null;
+				if (!scriptFile.exists()) 
+				{
+					try 
+					{
+						scriptIn = new BufferedInputStream(new URL("http://lts6.lts.appstate.edu/mensch-store-web/artifact/" + scriptHashValue).openStream());
+						scriptFos = new FileOutputStream(scriptFile, true);
+						int read = 0;
+						byte[] bytes = new byte[1024];
+						while ((read = scriptIn.read(bytes, 0, 1024)) != -1) 
+						{
+							scriptFos.write(bytes, 0, read);
+						}
+					} 
+					catch (MalformedURLException e) 
+					{
+						getLogger().info("SRT malformed URL: " + e.getMessage());
+					} 
+					catch (FileNotFoundException e) 
+					{
+						getLogger().info("SRT file not found: " + e.getMessage());
+					} 
+					catch (IOException e) 
+					{
+						getLogger().info("SRT IO exception: " + e.getMessage());
+					} 
+					finally 
+					{
+						if (scriptIn != null) 
+						{
+							try 
+							{
+								scriptIn.close();
+							} 
+							catch (IOException e) 
+							{
+								getLogger().info("SRT IN close IO exception: " + e.getMessage());
+							}
+						}
+						if (mediaFos != null) 
+						{
+							try 
+							{
+								scriptFos.close();
+							} 
+							catch (IOException e) 
+							{
+								getLogger().info("SRT FOS close IO exception: " + e.getMessage());
+							}
 						}
 					}
 				}
@@ -205,6 +262,38 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 		String fullname = appInstance.getApplication().getName() + "/" + appInstance.getName();
 		
 		getLogger().info("onAppStart: " + fullname);
+		
+		// Default days for files to stay on server is 30
+		this.timeToLive = appInstance.getProperties().getPropertyInt("timeToLive", this.timeToLive);
+		// Set days for files to stay on server based on GUI config
+		this.timeToLive = appInstance.getProperties().getPropertyInt("validateTTL", this.timeToLive);
+		
+		File directory = new File(appInstance.getStreamStorageDir());
+		File[] files = directory.listFiles();
+		Date modified;
+		Date today = new Date();
+		long age;
+		long days = (long) this.timeToLive;
+		long daysToLong = 86400000;
+		for (int i = 0; i < files.length; i++)
+		{
+			modified = new Date(files[i].lastModified());
+			age = today.getTime() - modified.getTime();
+			//getLogger().info("File " + files[i].getName() + " last modified " + modified.toString());
+			if (age > (days * daysToLong) 
+					&& !files[i].getName().equals("wowzalogo.png")
+					&& !files[i].getName().equals("sample.mp4")
+					&& !files[i].getName().equals("access-denied.srt")
+					&& !files[i].getName().equals("access-denied.mp4"))
+			{
+				getLogger().info("File " + files[i].getName() + " last modified " + modified.toString() + ". File will be deleted.");
+				files[i].delete();
+			}
+			else
+			{
+				getLogger().info("File " + files[i].getName() + " last modified " + modified.toString() + ", or it is required. File will not be deleted.");
+			}
+		}
 		
 		appInstance.setStreamNameAliasProvider(this);
 	}
