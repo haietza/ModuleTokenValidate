@@ -18,8 +18,6 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Date;
-import java.util.List;
-
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -39,7 +37,9 @@ import org.xml.sax.SAXException;
 
 public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameAliasProvider2 
 {
+	// Set default number of days for files to stay on Wowza server.
 	private int timeToLive = 30;
+	
 	/**
 	 * Constructor calls ModuleBase constructor.
 	 */
@@ -94,32 +94,34 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 				}
 			}
 			
-			getLogger().info("Values received from web service: MediaHashValue = " + mediaHashValue + ", ScriptHashValue = " + scriptHashValue + ", IP = " + wsIpAddress + ", URL = " + wsUrl);
+			getLogger().info("Values received from web service: MediaHashValue = " + mediaHashValue 
+					+ ", ScriptHashValue = " + scriptHashValue + ", IP = " + wsIpAddress + ", URL = " + wsUrl);
 		
 		} 
 		catch (MalformedURLException e) 
 		{
-			getLogger().info("Malformed URL: " + e.getMessage());
+			getLogger().warn("Malformed URL: " + e.getMessage());
 		} 
 		catch (ParserConfigurationException e) 
 		{
-			getLogger().info("Parser configuration: " + e.getMessage());
+			getLogger().warn("Parser configuration: " + e.getMessage());
 		} 
 		catch (IOException e) 
 		{
-			getLogger().info("IOException: " + e.getMessage());
+			getLogger().warn("IOException: " + e.getMessage());
 		} 
 		catch (SAXException e) 
 		{
-			getLogger().info("SAXException: " + e.getMessage());
+			getLogger().warn("SAXException: " + e.getMessage());
 		}
 		
-		// Validate token
-		// Get file and/or filename from Wowza cache or Mensch store 
-		getLogger().info("Validate URL: Wowza URL = " + url + " equals web service URL =  " + wsUrl + ": " + url.equalsIgnoreCase(wsUrl));
-		getLogger().info("Validate IP: Wowza IP = " + ipAddress + " equals web service IP = " + wsIpAddress + ": " + ipAddress.equalsIgnoreCase(wsIpAddress));
+		getLogger().info("Validate URL: Wowza URL = " + url + " equals web service URL =  " 
+		    + wsUrl + ": " + url.equalsIgnoreCase(wsUrl));
+		getLogger().info("Validate IP: Wowza IP = " + ipAddress + " equals web service IP = " 
+		    + wsIpAddress + ": " + ipAddress.equalsIgnoreCase(wsIpAddress));
 		
 		String fileName = "mp4:mensch/access-denied.mp4";
+		// Validate token
 		if (url.equalsIgnoreCase(wsUrl) && ipAddress.equalsIgnoreCase(wsIpAddress)) 
 		{
 			getLogger().info("Stream storage directory: " + appInstance.getStreamStorageDir());
@@ -128,11 +130,14 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 			
 			BufferedInputStream mediaIn = null;
 			FileOutputStream mediaFos = null;
+			
+			// Get file/filename from Wowza cache
 			if (mediaFile.exists()) 
 			{
 				fileName = "mp4:" + appInstance.getApplication().getName() + "/" + mediaFile.getName();
 				getLogger().info("Cache file name: " + fileName);
 			}
+			// Get file/filename from Mensch store
 			else 
 			{
 				try 
@@ -151,15 +156,15 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 				} 
 				catch (MalformedURLException e) 
 				{
-					getLogger().info("Malformed URL: " + e.getMessage());
+					getLogger().warn("Malformed URL: " + e.getMessage());
 				} 
 				catch (FileNotFoundException e) 
 				{
-					getLogger().info("File not found: " + e.getMessage());
+					getLogger().warn("File not found: " + e.getMessage());
 				} 
 				catch (IOException e) 
 				{
-					getLogger().info("IO exception: " + e.getMessage());
+					getLogger().warn("IO exception: " + e.getMessage());
 				} 
 				finally 
 				{
@@ -171,7 +176,7 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 						} 
 						catch (IOException e) 
 						{
-							getLogger().info("IN close IO exception: " + e.getMessage());
+							getLogger().warn("IN close IO exception: " + e.getMessage());
 						}
 					}
 					if (mediaFos != null) 
@@ -182,7 +187,7 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 						} 
 						catch (IOException e) 
 						{
-							getLogger().info("FOS close IO exception: " + e.getMessage());
+							getLogger().warn("FOS close IO exception: " + e.getMessage());
 						}
 					}
 				}
@@ -193,6 +198,7 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 				File scriptFile = new File(appInstance.getStreamStorageDir() + "/" + mediaHashValue + ".srt");
 				BufferedInputStream scriptIn = null;
 				FileOutputStream scriptFos = null;
+				// Get SRT file/filename from Mensch store
 				if (!scriptFile.exists()) 
 				{
 					try 
@@ -208,15 +214,15 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 					} 
 					catch (MalformedURLException e) 
 					{
-						getLogger().info("SRT malformed URL: " + e.getMessage());
+						getLogger().warn("SRT malformed URL: " + e.getMessage());
 					} 
 					catch (FileNotFoundException e) 
 					{
-						getLogger().info("SRT file not found: " + e.getMessage());
+						getLogger().warn("SRT file not found: " + e.getMessage());
 					} 
 					catch (IOException e) 
 					{
-						getLogger().info("SRT IO exception: " + e.getMessage());
+						getLogger().warn("SRT IO exception: " + e.getMessage());
 					} 
 					finally 
 					{
@@ -228,7 +234,7 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 							} 
 							catch (IOException e) 
 							{
-								getLogger().info("SRT IN close IO exception: " + e.getMessage());
+								getLogger().warn("SRT IN close IO exception: " + e.getMessage());
 							}
 						}
 						if (mediaFos != null) 
@@ -239,7 +245,7 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 							} 
 							catch (IOException e) 
 							{
-								getLogger().info("SRT FOS close IO exception: " + e.getMessage());
+								getLogger().warn("SRT FOS close IO exception: " + e.getMessage());
 							}
 						}
 					}
@@ -268,23 +274,23 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 		// Set days for files to stay on server based on GUI config
 		this.timeToLive = appInstance.getProperties().getPropertyInt("validateTTL", this.timeToLive);
 		
+		// Traverse file directory to check for files last modified days over configured TTL
+		// If last modified date is more than TTL days ago, delete the file from Wowza
 		File directory = new File(appInstance.getStreamStorageDir());
 		File[] files = directory.listFiles();
 		Date modified;
 		Date today = new Date();
 		long age;
-		long days = (long) this.timeToLive;
-		long daysToLong = 86400000;
+		long dtl = (long) this.timeToLive * 86400000;
 		for (int i = 0; i < files.length; i++)
 		{
 			modified = new Date(files[i].lastModified());
 			age = today.getTime() - modified.getTime();
-			//getLogger().info("File " + files[i].getName() + " last modified " + modified.toString());
-			if (age > (days * daysToLong) 
-					&& !files[i].getName().equals("wowzalogo.png")
-					&& !files[i].getName().equals("sample.mp4")
-					&& !files[i].getName().equals("access-denied.srt")
-					&& !files[i].getName().equals("access-denied.mp4"))
+			if (age > dtl
+				&& !files[i].getName().equals("wowzalogo.png")
+				&& !files[i].getName().equals("sample.mp4")
+				&& !files[i].getName().equals("access-denied.srt")
+				&& !files[i].getName().equals("access-denied.mp4"))
 			{
 				getLogger().info("File " + files[i].getName() + " last modified " + modified.toString() + ". File will be deleted.");
 				files[i].delete();
@@ -318,7 +324,7 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 		} 
 		catch (Exception e) 
 		{
-			getLogger().info("Validate token RTMP exception: " + e.getMessage());
+			getLogger().warn("Validate token RTMP exception: " + e.getMessage());
 			
 			client.rejectConnection(e.getMessage());
 			client.shutdownClient();
@@ -347,7 +353,7 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 		} 
 		catch (Exception e) 
 		{
-			getLogger().info("Validate token HTTP exception: " + e.getMessage());
+			getLogger().warn("Validate token HTTP exception: " + e.getMessage());
 			
 			httpSession.rejectSession();
 			httpSession.shutdown();
