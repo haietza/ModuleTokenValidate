@@ -13,6 +13,7 @@ import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -60,11 +61,12 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 	 */
 	private String validateToken(IApplicationInstance appInstance, String token, String url, String ipAddress) 
 	{
-		String mediaHashValue = null;
-		String scriptHashValue = null;
+		String HashValue = null;
+		//String scriptHashValue = null;
 		//String wsApplication;
 		String wsUrl = null;
 		String wsIpAddress = null;
+		String wsTranscript = null;
 		
 		getLogger().info("Arguments passed to validateToken from resolvePlayAlias: Token = " 
 				+ token + ", URL = " + url + ", IP = " + ipAddress);
@@ -72,7 +74,7 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 		// Get token info from LTS6 ticket web service
 		try 
 		{
-			URL ticket = new URL("http://lts6.lts.appstate.edu/mensch-tickets/ticket/" + token);
+			URL ticket = new URL("http://lts6.lts.appstate.edu:8088/mensch-catalog-webapi/api/ticket/" + token);
 			HttpURLConnection connection = (HttpURLConnection) ticket.openConnection();
 			connection.setRequestMethod("GET");
 			connection.setRequestProperty("Accept", "application/xml");
@@ -81,21 +83,22 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 			DocumentBuilder builder = factory.newDocumentBuilder();
 			Document doc = builder.parse(connection.getInputStream());
 			doc.getDocumentElement().normalize();
-			NodeList nList = doc.getElementsByTagName("Ticket");
+			NodeList nList = doc.getElementsByTagName("StreamTicket");
 			for (int i = 0; i < nList.getLength(); i++) {
 				Node nNode = nList.item(i);
 				if (nNode.getNodeType() == Node.ELEMENT_NODE) {
 					Element eElement = (Element) nNode;
-					mediaHashValue = eElement.getElementsByTagName("MediaHashValue").item(0).getTextContent();
-					scriptHashValue = eElement.getElementsByTagName("ScriptHashValue").item(0).getTextContent();
+					HashValue = eElement.getElementsByTagName("HashValue").item(0).getTextContent();
+					//scriptHashValue = eElement.getElementsByTagName("ScriptHashValue").item(0).getTextContent();
 					wsIpAddress = eElement.getElementsByTagName("IpAddr").item(0).getTextContent();
-					//wsApplication = eElement.getElementsByTagName("Issuer").item(0).getTextContent();
+					//wsApplication = eElement.getElementsByTagName("Outlet").item(0).getTextContent();
 					wsUrl = eElement.getElementsByTagName("Url").item(0).getTextContent();
+					wsTranscript = eElement.getElementsByTagName("Transcript").item(0).getTextContent();
 				}
 			}
 			
-			getLogger().info("Values received from web service: MediaHashValue = " + mediaHashValue 
-					+ ", ScriptHashValue = " + scriptHashValue + ", IP = " + wsIpAddress + ", URL = " + wsUrl);
+			getLogger().info("Values received from web service: HashValue = " + HashValue 
+					+ ", IP = " + wsIpAddress + ", URL = " + wsUrl);
 		
 		} 
 		catch (MalformedURLException e) 
@@ -126,7 +129,7 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 		{
 			getLogger().info("Stream storage directory: " + appInstance.getStreamStorageDir());
 			
-			File mediaFile = new File(appInstance.getStreamStorageDir() + "/" + mediaHashValue + ".mp4");
+			File mediaFile = new File(appInstance.getStreamStorageDir() + "/" + HashValue + ".mp4");
 			
 			BufferedInputStream mediaIn = null;
 			FileOutputStream mediaFos = null;
@@ -142,7 +145,7 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 			{
 				try 
 				{
-					mediaIn = new BufferedInputStream(new URL("http://lts6.lts.appstate.edu/mensch-store-web/artifact/" + mediaHashValue).openStream());
+					mediaIn = new BufferedInputStream(new URL("http://lts6.lts.appstate.edu/mensch-store-web/artifact/" + HashValue).openStream());
 					mediaFos = new FileOutputStream(mediaFile, true);
 					int read = 0;
 					byte[] bytes = new byte[1024];
@@ -150,7 +153,7 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 					{
 						mediaFos.write(bytes, 0, read);
 					}
-					fileName = "mp4:" + appInstance.getApplication().getName() + "/" + mediaHashValue + ".mp4";
+					fileName = "mp4:" + appInstance.getApplication().getName() + "/" + HashValue + ".mp4";
 					
 					getLogger().info("Downloaded file name: " + fileName);
 				} 
@@ -193,9 +196,29 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 				}
 			}
 			
+			if (!wsTranscript.equals("")) 
+			{
+				// Decode -->
+				wsTranscript = wsTranscript.replaceAll("--&gt;", "-->");
+				// Save to file
+				try
+				{
+					File scriptFile = new File(appInstance.getStreamStorageDir() + "/" + HashValue + ".srt");
+					FileWriter fileWriter = new FileWriter(scriptFile);
+					fileWriter.write(wsTranscript);
+					fileWriter.flush();
+					fileWriter.close();
+				}
+				catch (IOException e)
+				{
+					getLogger().warn("FileWriter close IO exception: " + e.getMessage());
+				}
+			}
+			
+			/*
 			if (scriptHashValue != null)
 			{
-				File scriptFile = new File(appInstance.getStreamStorageDir() + "/" + mediaHashValue + ".srt");
+				File scriptFile = new File(appInstance.getStreamStorageDir() + "/" + HashValue + ".srt");
 				BufferedInputStream scriptIn = null;
 				FileOutputStream scriptFos = null;
 				// Get SRT file/filename from Mensch store
@@ -251,6 +274,7 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 					}
 				}
 			}
+			*/
 		}
 		
 		getLogger().info("Returned file name: " + fileName);
