@@ -41,6 +41,12 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 	// Set default number of days for files to stay on Wowza server.
 	private int timeToLive = 30;
 	
+	// Set default ticket web service URL.
+	private String ticketService = "";
+	
+	// Set default store web service URL.
+	private String storeService = "";
+	
 	/**
 	 * Constructor calls ModuleBase constructor.
 	 */
@@ -61,20 +67,22 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 	 */
 	private String validateToken(IApplicationInstance appInstance, String token, String url, String ipAddress) 
 	{
-		String HashValue = null;
-		//String scriptHashValue = null;
-		//String wsApplication;
-		String wsUrl = null;
-		String wsIpAddress = null;
-		String wsTranscript = null;
+		String hashValue = null;
+		// String ticketOutlet;
+		String ticketUrl = null;
+		String ticketIpAddr = null;
+		String transcript = null;
 		
 		getLogger().info("Arguments passed to validateToken from resolvePlayAlias: Token = " 
 				+ token + ", URL = " + url + ", IP = " + ipAddress);
+		getLogger().info("Ticket URL: " + ticketService);
+		getLogger().info("Store URL: " + storeService);
 		
-		// Get token info from LTS6 ticket web service
+		// Get token info from ticket web service
 		try 
 		{
-			URL ticket = new URL("http://lts6.lts.appstate.edu:8088/mensch-catalog-webapi/api/ticket/" + token);
+			URL ticket = new URL(ticketService + token);
+			getLogger().info(ticketService + token);
 			HttpURLConnection connection = (HttpURLConnection) ticket.openConnection();
 			connection.setRequestMethod("GET");
 			connection.setRequestProperty("Accept", "application/xml");
@@ -88,17 +96,16 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 				Node nNode = nList.item(i);
 				if (nNode.getNodeType() == Node.ELEMENT_NODE) {
 					Element eElement = (Element) nNode;
-					HashValue = eElement.getElementsByTagName("HashValue").item(0).getTextContent();
-					//scriptHashValue = eElement.getElementsByTagName("ScriptHashValue").item(0).getTextContent();
-					wsIpAddress = eElement.getElementsByTagName("IpAddr").item(0).getTextContent();
-					//wsApplication = eElement.getElementsByTagName("Outlet").item(0).getTextContent();
-					wsUrl = eElement.getElementsByTagName("Url").item(0).getTextContent();
-					wsTranscript = eElement.getElementsByTagName("Transcript").item(0).getTextContent();
+					hashValue = eElement.getElementsByTagName("HashValue").item(0).getTextContent();
+					ticketIpAddr = eElement.getElementsByTagName("IpAddr").item(0).getTextContent();
+					//ticketOutlet = eElement.getElementsByTagName("Outlet").item(0).getTextContent();
+					ticketUrl = eElement.getElementsByTagName("Url").item(0).getTextContent();
+					transcript = eElement.getElementsByTagName("Transcript").item(0).getTextContent();
 				}
 			}
 			
-			getLogger().info("Values received from web service: HashValue = " + HashValue 
-					+ ", IP = " + wsIpAddress + ", URL = " + wsUrl);
+			getLogger().info("Values received from web service: hash value = " + hashValue 
+					+ ", IP = " + ticketIpAddr + ", URL = " + ticketUrl);
 		
 		} 
 		catch (MalformedURLException e) 
@@ -119,33 +126,33 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 		}
 		
 		getLogger().info("Validate URL: Wowza URL = " + url + " equals web service URL =  " 
-		    + wsUrl + ": " + url.equalsIgnoreCase(wsUrl));
+		    + ticketUrl + ": " + url.equalsIgnoreCase(ticketUrl));
 		getLogger().info("Validate IP: Wowza IP = " + ipAddress + " equals web service IP = " 
-		    + wsIpAddress + ": " + ipAddress.equalsIgnoreCase(wsIpAddress));
+		    + ticketIpAddr + ": " + ipAddress.equalsIgnoreCase(ticketIpAddr));
 		
-		String fileName = "mp4:mensch/access-denied.mp4";
+		String fileName = "mp4:access-denied.mp4";
 		// Validate token
-		if (url.equalsIgnoreCase(wsUrl) && ipAddress.equalsIgnoreCase(wsIpAddress)) 
+		if (url.equalsIgnoreCase(ticketUrl) && ipAddress.equalsIgnoreCase(ticketIpAddr)) 
 		{
 			getLogger().info("Stream storage directory: " + appInstance.getStreamStorageDir());
 			
-			File mediaFile = new File(appInstance.getStreamStorageDir() + "/" + HashValue + ".mp4");
+			File mediaFile = new File(appInstance.getStreamStorageDir() + "/" + hashValue + ".mp4");
 			
 			BufferedInputStream mediaIn = null;
 			FileOutputStream mediaFos = null;
 			
-			// Get file/filename from Wowza cache
+			// Get file/filename from Wowza content directory
 			if (mediaFile.exists()) 
 			{
-				fileName = "mp4:" + appInstance.getApplication().getName() + "/" + mediaFile.getName();
-				getLogger().info("Cache file name: " + fileName);
+				fileName = "mp4:" + mediaFile.getName();
+				getLogger().info("Existing file name: " + fileName);
 			}
 			// Get file/filename from Mensch store
 			else 
 			{
 				try 
 				{
-					mediaIn = new BufferedInputStream(new URL("http://lts6.lts.appstate.edu/mensch-store-web/artifact/" + HashValue).openStream());
+					mediaIn = new BufferedInputStream(new URL(storeService + hashValue).openStream());
 					mediaFos = new FileOutputStream(mediaFile, true);
 					int read = 0;
 					byte[] bytes = new byte[1024];
@@ -153,7 +160,7 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 					{
 						mediaFos.write(bytes, 0, read);
 					}
-					fileName = "mp4:" + appInstance.getApplication().getName() + "/" + HashValue + ".mp4";
+					fileName = "mp4:" + hashValue + ".mp4";
 					
 					getLogger().info("Downloaded file name: " + fileName);
 				} 
@@ -196,16 +203,16 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 				}
 			}
 			
-			if (!wsTranscript.equals("")) 
+			if (!transcript.equals("")) 
 			{
 				// Decode -->
-				wsTranscript = wsTranscript.replaceAll("--&gt;", "-->");
+				transcript = transcript.replaceAll("--&gt;", "-->");
 				// Save to file
 				try
 				{
-					File scriptFile = new File(appInstance.getStreamStorageDir() + "/" + HashValue + ".srt");
+					File scriptFile = new File(appInstance.getStreamStorageDir() + "/" + hashValue + ".srt");
 					FileWriter fileWriter = new FileWriter(scriptFile);
-					fileWriter.write(wsTranscript);
+					fileWriter.write(transcript);
 					fileWriter.flush();
 					fileWriter.close();
 				}
@@ -214,67 +221,6 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 					getLogger().warn("FileWriter close IO exception: " + e.getMessage());
 				}
 			}
-			
-			/*
-			if (scriptHashValue != null)
-			{
-				File scriptFile = new File(appInstance.getStreamStorageDir() + "/" + HashValue + ".srt");
-				BufferedInputStream scriptIn = null;
-				FileOutputStream scriptFos = null;
-				// Get SRT file/filename from Mensch store
-				if (!scriptFile.exists()) 
-				{
-					try 
-					{
-						scriptIn = new BufferedInputStream(new URL("http://lts6.lts.appstate.edu/mensch-store-web/artifact/" + scriptHashValue).openStream());
-						scriptFos = new FileOutputStream(scriptFile, true);
-						int read = 0;
-						byte[] bytes = new byte[1024];
-						while ((read = scriptIn.read(bytes, 0, 1024)) != -1) 
-						{
-							scriptFos.write(bytes, 0, read);
-						}
-					} 
-					catch (MalformedURLException e) 
-					{
-						getLogger().warn("SRT malformed URL: " + e.getMessage());
-					} 
-					catch (FileNotFoundException e) 
-					{
-						getLogger().warn("SRT file not found: " + e.getMessage());
-					} 
-					catch (IOException e) 
-					{
-						getLogger().warn("SRT IO exception: " + e.getMessage());
-					} 
-					finally 
-					{
-						if (scriptIn != null) 
-						{
-							try 
-							{
-								scriptIn.close();
-							} 
-							catch (IOException e) 
-							{
-								getLogger().warn("SRT IN close IO exception: " + e.getMessage());
-							}
-						}
-						if (mediaFos != null) 
-						{
-							try 
-							{
-								scriptFos.close();
-							} 
-							catch (IOException e) 
-							{
-								getLogger().warn("SRT FOS close IO exception: " + e.getMessage());
-							}
-						}
-					}
-				}
-			}
-			*/
 		}
 		
 		getLogger().info("Returned file name: " + fileName);
@@ -297,6 +243,16 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 		this.timeToLive = appInstance.getProperties().getPropertyInt("timeToLive", this.timeToLive);
 		// Set days for files to stay on server based on GUI config
 		this.timeToLive = appInstance.getProperties().getPropertyInt("validateTTL", this.timeToLive);
+		
+		// Default URL for ticket web service
+		this.ticketService = appInstance.getProperties().getPropertyStr("ticketService", this.ticketService);
+		// Set URL for ticket web service
+		this.ticketService = appInstance.getProperties().getPropertyStr("validateTicketURL", this.ticketService);
+		
+		// Default URL for ticket web service
+		this.storeService = appInstance.getProperties().getPropertyStr("storeService", this.storeService);
+		// Set URL for ticket web service
+		this.storeService = appInstance.getProperties().getPropertyStr("validateStoreURL", this.storeService);
 		
 		// Traverse file directory to check for files last modified days over configured TTL
 		// If last modified date is more than TTL days ago, delete the file from Wowza
@@ -341,7 +297,7 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 	{
 		getLogger().info("RTMP resolvePlayAlias Wowza values: Token = " + client.getQueryStr() + ", URL = " + client.getPageUrl() + ", IP = " + client.getIp() + ", Name = " + name);
 		
-		String fileName = "mp4:mensch/access-denied.mp4";
+		String fileName = "mp4:access-denied.mp4";
 		try 
 		{
 			fileName = validateToken(appInstance, client.getQueryStr(), client.getPageUrl(), client.getIp());
@@ -370,7 +326,7 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 	{
 		getLogger().info("HTTP resolvePlayAlias Wowza values: Token = " + httpSession.getQueryStr() + ", URL = " + httpSession.getReferrer() + ", IP = " + httpSession.getIpAddress());
 		
-		String fileName = "mp4:mensch/access-denied.mp4";
+		String fileName = "mp4:access-denied.mp4";
 		try 
 		{
 			fileName = validateToken(appInstance, httpSession.getQueryStr(), httpSession.getReferrer(), httpSession.getIpAddress());
