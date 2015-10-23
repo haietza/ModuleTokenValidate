@@ -1,5 +1,6 @@
 package edu.appstate.lts;
 
+import com.wowza.util.ElapsedTimer;
 import com.wowza.wms.application.*;
 import com.wowza.wms.client.*;
 import com.wowza.wms.module.*;
@@ -19,6 +20,9 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Date;
+import java.util.Timer;
+import java.util.TimerTask;
+
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -239,11 +243,6 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 		
 		getLogger().info("onAppStart: " + fullname);
 		
-		// Default days for files to stay on server is 30
-		this.timeToLive = appInstance.getProperties().getPropertyInt("timeToLive", this.timeToLive);
-		// Set days for files to stay on server based on GUI config
-		this.timeToLive = appInstance.getProperties().getPropertyInt("validateTTL", this.timeToLive);
-		
 		// Default URL for ticket web service
 		this.ticketService = appInstance.getProperties().getPropertyStr("ticketService", this.ticketService);
 		// Set URL for ticket web service
@@ -254,34 +253,13 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 		// Set URL for ticket web service
 		this.storeService = appInstance.getProperties().getPropertyStr("validateStoreURL", this.storeService);
 		
-		// Traverse file directory to check for files last modified days over configured TTL
-		// If last modified date is more than TTL days ago, delete the file from Wowza
-		File directory = new File(appInstance.getStreamStorageDir());
-		File[] files = directory.listFiles();
-		Date modified;
-		Date today = new Date();
-		long age;
-		long dtl = (long) this.timeToLive * 86400000;
-		for (int i = 0; i < files.length; i++)
-		{
-			modified = new Date(files[i].lastModified());
-			age = today.getTime() - modified.getTime();
-			if (age > dtl
-				&& !files[i].getName().equals("wowzalogo.png")
-				&& !files[i].getName().equals("sample.mp4")
-				&& !files[i].getName().equals("access-denied.srt")
-				&& !files[i].getName().equals("access-denied.mp4"))
-			{
-				getLogger().info("File " + files[i].getName() + " last modified " + modified.toString() + ". File will be deleted.");
-				files[i].delete();
-			}
-			else
-			{
-				getLogger().info("File " + files[i].getName() + " last modified " + modified.toString() + ", or it is required. File will not be deleted.");
-			}
-		}
-		
 		appInstance.setStreamNameAliasProvider(this);
+		
+		TimerTask filePurge = new FilePurge(appInstance);
+		Timer timer = new Timer();
+		timer.schedule(filePurge, 10000, 180000);
+		//timer.cancel();
+		//timer.purge();
 	}
 	
 	/**
