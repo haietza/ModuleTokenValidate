@@ -42,14 +42,14 @@ import org.xml.sax.SAXException;
 
 public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameAliasProvider2 
 {
-	// Set default number of days for files to stay on Wowza server.
-	private int timeToLive = 30;
-	
 	// Set default ticket web service URL.
 	private String ticketService = "";
 	
 	// Set default store web service URL.
 	private String storeService = "";
+	
+	TimerTask filePurge;
+	Timer timer;
 	
 	/**
 	 * Constructor calls ModuleBase constructor.
@@ -240,7 +240,6 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 	public void onAppStart(IApplicationInstance appInstance) 
 	{
 		String fullname = appInstance.getApplication().getName() + "/" + appInstance.getName();
-		
 		getLogger().info("onAppStart: " + fullname);
 		
 		// Default URL for ticket web service
@@ -254,10 +253,37 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 		this.storeService = appInstance.getProperties().getPropertyStr("validateStoreURL", this.storeService);
 		
 		appInstance.setStreamNameAliasProvider(this);
-		
+				
+		Timer timer = new Timer(true);
 		TimerTask filePurge = new FilePurge(appInstance);
-		Timer timer = new Timer();
-		timer.schedule(filePurge, 10000, 180000);
+		try 
+		{
+			// Start after 10 seconds, repeat every 3 minutes
+			getLogger().info("File purge starting in 10 seconds.");
+			timer.schedule(filePurge, 10000, 180000);
+		}
+		catch (IllegalArgumentException e)
+		{
+			getLogger().error("Delay time was negative.");
+		}
+		catch (IllegalStateException e)
+		{
+			getLogger().error("Task was already scheduled or cancelled.");
+		}
+		catch (NullPointerException e)
+		{
+			getLogger().error("Task was null.");
+		}
+	}
+	
+	/**
+	 * On application stop, cancels the timer task to purge files and purges cancelled tasks.
+	 * @param appInstance
+	 */
+	public void onAppStop(IApplicationInstance appInstance) {
+		String fullname = appInstance.getApplication().getName() + "/" + appInstance.getName();
+		getLogger().info("onAppStop: " + fullname);
+		
 		//timer.cancel();
 		//timer.purge();
 	}
