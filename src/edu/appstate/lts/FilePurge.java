@@ -10,25 +10,39 @@ import com.wowza.wms.logging.WMSLogger;
 import com.wowza.wms.logging.WMSLoggerFactory;
 import com.wowza.wms.stream.IMediaStream;
 
+/**
+ * Class to purge files on Wowza streaming server.
+ * 
+ * @author Michelle Melton
+ * @version Oct 2015
+ */
 public class FilePurge extends TimerTask 
 {
 	private IApplicationInstance appInstance;
 	private WMSLogger logger;
 	private File[] files;
 	private Date modified;
-	private Date today;
 	private long age;
 	private long longDays;
+	private List<IMediaStream> streams;
 	
 	// Set default number of days for files to stay on Wowza server.
 	private int timeToLive = 30;
 	
+	/**
+	 * Constructor to create instance of file purge thread/task.
+	 * 
+	 * @param appInstance 
+	 */
 	public FilePurge(IApplicationInstance appInstance)
 	{
 		this.appInstance = appInstance;
 		logger = WMSLoggerFactory.getLoggerObj(appInstance);
 	}
 	
+	/**
+	 * Overridden run method for TimerTask abstract class.
+	 */
 	@Override
 	public void run() {
 		// Default days for files to stay on server is 30
@@ -44,22 +58,31 @@ public class FilePurge extends TimerTask
 		logger.info("Total space: " + directory.getTotalSpace());
 		logger.info("Usable space: " + directory.getUsableSpace());
 		
-		if (directory.getUsableSpace() < (directory.getTotalSpace() / 3))
+		if (directory.getUsableSpace() < (directory.getTotalSpace() / 4))
 		{
-			logger.info("Usable space is less than 30% of total space.");
-			
+			logger.info("Usable space is less than 25% of total space.");
 			logger.info("Purging files over " + timeToLive + " days old.");
+			
 			files = directory.listFiles();
 			longDays = (long) timeToLive * 86400000;
 			
-			List<IMediaStream> streams = appInstance.getStreams().getStreams();
+			// Get streams currently being played
+			streams = appInstance.getStreams().getStreams();
+			
+			// Iterate through current streams to get MP4 filename and SRT filename of each
 			for (int i = 0; i < streams.size(); i++)
 			{
-				logger.info("Stream " + i + ": " + streams.get(i).getName());
+				logger.info("Current stream " + i + ": " + streams.get(i).getName());
+				logger.info("Current stream SRT " + i + ": " + streams.get(i).getName().substring(0,streams.get(i).getName().length() - 4).concat(".srt"));
 				
+				// Iterate through files in Wowza content directory
+				// Check if a file, older than timeToLive, required file, or current stream MP4 or SRT
 				for (int j = 0; j < files.length; j++)
 				{
-					if (age > longDays && files[i].isFile()
+					age = files[j].lastModified();
+					modified = new Date(age);
+					if (age > longDays 
+							&& files[j].isFile()
 							&& !files[j].getName().equals("wowzalogo.png")
 							&& !files[j].getName().equals("sample.mp4")
 							&& !files[j].getName().equals("access-denied.srt")
@@ -69,7 +92,7 @@ public class FilePurge extends TimerTask
 					{
 						logger.info("File " + files[j].getName() + " last modified " + modified.toString() + ". File will be deleted.");
 						logger.info(files[j].getName() + " is " + files[j].length());
-						files[i].delete();
+						files[j].delete();
 					}
 					else
 					{
@@ -80,21 +103,21 @@ public class FilePurge extends TimerTask
 			}
 		}
 		
-		if (directory.getUsableSpace() < (directory.getTotalSpace() / 3))
+		if (directory.getUsableSpace() < (directory.getTotalSpace() / 4))
 		{
-			logger.info("Usable space is STILL less than 30% of total space.");
-			
+			logger.info("Usable space is STILL less than 25% of total space.");
 			logger.info("Purging all but required and current files.");
-			files = directory.listFiles();
 			
-			List<IMediaStream> streams = appInstance.getStreams().getStreams();
+			files = directory.listFiles();
+			streams = appInstance.getStreams().getStreams();
+			
 			for (int i = 0; i < streams.size(); i++)
 			{
 				logger.info("Stream " + i + ": " + streams.get(i).getName());
 				
 				for (int j = 0; j < files.length; j++)
 				{
-					if (files[i].isFile()
+					if (files[j].isFile()
 							&& !files[j].getName().equals("wowzalogo.png")
 							&& !files[j].getName().equals("sample.mp4")
 							&& !files[j].getName().equals("access-denied.srt")
@@ -104,7 +127,7 @@ public class FilePurge extends TimerTask
 					{
 						logger.info("File " + files[j].getName() + " will be deleted.");
 						logger.info(files[j].getName() + " is " + files[j].length());
-						files[i].delete();
+						files[j].delete();
 					}
 					else
 					{

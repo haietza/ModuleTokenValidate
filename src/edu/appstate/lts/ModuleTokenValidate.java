@@ -1,6 +1,5 @@
 package edu.appstate.lts;
 
-import com.wowza.util.ElapsedTimer;
 import com.wowza.wms.application.*;
 import com.wowza.wms.client.*;
 import com.wowza.wms.module.*;
@@ -19,7 +18,6 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -39,17 +37,16 @@ import org.xml.sax.SAXException;
  * @author Michelle Melton
  * @version Sep 2015
  */
-
 public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameAliasProvider2 
 {
-	// Set default ticket web service URL.
+	// Default ticket web service URL.
 	private String ticketService = "";
 	
-	// Set default store web service URL.
+	// Default store web service URL.
 	private String storeService = "";
 	
-	TimerTask filePurge;
-	Timer timer;
+	private TimerTask filePurge;
+	private Timer timer;
 	
 	/**
 	 * Constructor calls ModuleBase constructor.
@@ -145,13 +142,13 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 			BufferedInputStream mediaIn = null;
 			FileOutputStream mediaFos = null;
 			
-			// Get file/filename from Wowza content directory
+			// Get filename from Wowza content directory
 			if (mediaFile.exists()) 
 			{
 				fileName = "mp4:" + mediaFile.getName();
-				getLogger().info("Existing file name: " + fileName);
+				getLogger().info("File already on Wowza server: " + fileName);
 			}
-			// Get file/filename from Mensch store
+			// Get file from Mensch store
 			else 
 			{
 				try 
@@ -166,7 +163,7 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 					}
 					fileName = "mp4:" + hashValue + ".mp4";
 					
-					getLogger().info("Downloaded file name: " + fileName);
+					getLogger().info("File streamed from store service: " + fileName);
 				} 
 				catch (MalformedURLException e) 
 				{
@@ -227,7 +224,7 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 			}
 		}
 		
-		getLogger().info("Returned file name: " + fileName);
+		getLogger().info("Validate token returned file name: " + fileName);
 		
 		return fileName;
 	}
@@ -252,10 +249,12 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 		// Set URL for ticket web service
 		this.storeService = appInstance.getProperties().getPropertyStr("validateStoreURL", this.storeService);
 		
+		// Call overridden resolvePlayAlias and play the stream returned from validateToken
 		appInstance.setStreamNameAliasProvider(this);
-				
-		Timer timer = new Timer(true);
-		TimerTask filePurge = new FilePurge(appInstance);
+		
+		// Purge files thread/task to perform housekeeping on server
+		timer = new Timer(true);
+		filePurge = new FilePurge(appInstance);
 		try 
 		{
 			// Start after 10 seconds, repeat every 3 minutes
@@ -299,7 +298,8 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 	@Override
 	public String resolvePlayAlias(IApplicationInstance appInstance, String name, IClient client) 
 	{
-		getLogger().info("RTMP resolvePlayAlias Wowza values: Token = " + client.getQueryStr() + ", URL = " + client.getPageUrl() + ", IP = " + client.getIp() + ", Name = " + name);
+		getLogger().info("RTMP resolvePlayAlias Wowza values: Token = " + client.getQueryStr() + ", URL = " 
+		    + client.getPageUrl() + ", IP = " + client.getIp() + ", Name = " + name);
 		
 		String fileName = "mp4:access-denied.mp4";
 		try 
@@ -328,7 +328,8 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 	@Override
 	public String resolvePlayAlias(IApplicationInstance appInstance, String name, IHTTPStreamerSession httpSession)
 	{
-		getLogger().info("HTTP resolvePlayAlias Wowza values: Token = " + httpSession.getQueryStr() + ", URL = " + httpSession.getReferrer() + ", IP = " + httpSession.getIpAddress());
+		getLogger().info("HTTP resolvePlayAlias Wowza values: Token = " + httpSession.getQueryStr() + ", URL = " 
+		    + httpSession.getReferrer() + ", IP = " + httpSession.getIpAddress());
 		
 		String fileName = "mp4:access-denied.mp4";
 		try 

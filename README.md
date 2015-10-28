@@ -6,6 +6,8 @@ If the validation fails, an access denied video is sent to the player.
 If the validation passes, and the media file exists on the Wowza server, the content is sent to the player.
 If the media file does not exist, the store web service is called to retrieve the media file.
 
+The module also includes a file purge thread/task for server housekeeping.
+
 Module Custom Properties
 
 Configurable file purge
