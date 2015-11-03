@@ -8,25 +8,29 @@ If the media file does not exist, the store web service is called to retrieve th
 
 The module also includes a file purge thread/task for server housekeeping.
 
+Need access-denied.mp4, access-denied.srt, and ModuleTokenValidate.jar files.
+
+Storage directory should be configured as sub-directory of /content in application.
+
 Module Custom Properties
 
 Configurable file purge
 * Path: /Root/Application
-* Name: validateTTL
+* Name: time-to-live
 * Type: Integer
 * Value: [desired number of days for files to stay on the Wowza server]
 The default value is 30 days.
 
 Configurable ticket web service URL
 * Path: /Root/Application
-* Name: validateTicketURL
+* Name: ticket-service-url
 * Type: String
 * Value: [URL to ticket web service]
 The ticket token will be appended to the ticket web service URL.
 
 Configurable store web service URL
 * Path: /Root/Application
-* Name: validateStoreURL
+* Name: store-service-url
 * Type: String
 * Value: [URL to store web service]
 The media hash value will be appended to the store web service URL.

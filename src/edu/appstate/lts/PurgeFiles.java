@@ -16,8 +16,12 @@ import com.wowza.wms.stream.IMediaStream;
  * @author Michelle Melton
  * @version Oct 2015
  */
-public class FilePurge extends TimerTask 
+public class PurgeFiles extends TimerTask 
 {
+	private static final String TIME_TO_LIVE = "time-to-live";
+	// Set default number of days for files to stay on Wowza server.
+	private int timeToLive = 30;
+	
 	private IApplicationInstance appInstance;
 	private WMSLogger logger;
 	private File[] files;
@@ -26,15 +30,12 @@ public class FilePurge extends TimerTask
 	private long longDays;
 	private List<IMediaStream> streams;
 	
-	// Set default number of days for files to stay on Wowza server.
-	private int timeToLive = 30;
-	
 	/**
 	 * Constructor to create instance of file purge thread/task.
 	 * 
 	 * @param appInstance 
 	 */
-	public FilePurge(IApplicationInstance appInstance)
+	public PurgeFiles(IApplicationInstance appInstance)
 	{
 		this.appInstance = appInstance;
 		logger = WMSLoggerFactory.getLoggerObj(appInstance);
@@ -45,10 +46,8 @@ public class FilePurge extends TimerTask
 	 */
 	@Override
 	public void run() {
-		// Default days for files to stay on server is 30
-		timeToLive = appInstance.getProperties().getPropertyInt("timeToLive", timeToLive);
 		// Set days for files to stay on server based on GUI config
-		timeToLive = appInstance.getProperties().getPropertyInt("validateTTL", timeToLive);
+		timeToLive = appInstance.getProperties().getPropertyInt(TIME_TO_LIVE, timeToLive);
 		
 		// Traverse file directory to check for files last modified days over configured TTL
 		// If last modified date is more than TTL days ago, delete the file from Wowza
@@ -85,8 +84,6 @@ public class FilePurge extends TimerTask
 							&& files[j].isFile()
 							&& !files[j].getName().equals("wowzalogo.png")
 							&& !files[j].getName().equals("sample.mp4")
-							&& !files[j].getName().equals("access-denied.srt")
-							&& !files[j].getName().equals("access-denied.mp4")
 							&& !files[j].getName().equals(streams.get(i).getName())
 							&& !files[j].getName().equals(streams.get(i).getName().substring(0,streams.get(i).getName().length() - 4).concat(".srt")))
 					{
@@ -120,8 +117,6 @@ public class FilePurge extends TimerTask
 					if (files[j].isFile()
 							&& !files[j].getName().equals("wowzalogo.png")
 							&& !files[j].getName().equals("sample.mp4")
-							&& !files[j].getName().equals("access-denied.srt")
-							&& !files[j].getName().equals("access-denied.mp4")
 							&& !files[j].getName().equals(streams.get(i).getName())
 							&& !files[j].getName().equals(streams.get(i).getName().substring(0,streams.get(i).getName().length() - 4).concat(".srt")))
 					{
