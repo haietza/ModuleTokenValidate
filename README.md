@@ -1,4 +1,4 @@
-# wowza-ModuleTokenValidate
+# wowza-ModuleMenschTickets
 
 This module calls a ticket web service with a token to get a hash value, a publishing outlet, a transcript, an IP address, and a URL for a valid media request. 
 It then validates the IP address and URL information obtained from the Wowza server play request against the information obtained from the ticket web service.

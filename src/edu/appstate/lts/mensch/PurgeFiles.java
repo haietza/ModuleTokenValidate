@@ -1,4 +1,4 @@
-package edu.appstate.lts;
+package edu.appstate.lts.mensch;
 
 import java.io.File;
 import java.util.Date;

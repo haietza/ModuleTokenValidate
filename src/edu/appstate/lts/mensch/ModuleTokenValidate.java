@@ -1,4 +1,4 @@
-package edu.appstate.lts;
+package edu.appstate.lts.mensch;
 
 import com.wowza.wms.amf.AMFDataList;
 import com.wowza.wms.application.*;
@@ -30,7 +30,7 @@ public class ModuleTokenValidate extends ModuleBase implements IMediaStreamNameA
 	/**
 	 * Constructor calls ModuleBase constructor.
 	 */
-	public ModuleTokenValidate() 
+	public ModuleTokenValidate()
 	{
 		super();
 	}

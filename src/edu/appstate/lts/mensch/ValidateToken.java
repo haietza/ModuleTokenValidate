@@ -1,4 +1,4 @@
-package edu.appstate.lts;
+package edu.appstate.lts.mensch;
 
 import java.io.BufferedInputStream;
 import java.io.File;
