@@ -21,10 +21,16 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import com.wowza.wms.application.IApplicationInstance;
+import com.wowza.wms.client.IClient;
+import com.wowza.wms.httpstreamer.model.IHTTPStreamerSession;
 import com.wowza.wms.logging.WMSLogger;
 import com.wowza.wms.logging.WMSLoggerFactory;
+import com.wowza.wms.mediacaster.IMediaCaster;
+import com.wowza.wms.rtp.model.RTPSession;
+import com.wowza.wms.stream.IMediaStreamNameAliasProvider2;
+import com.wowza.wms.stream.livepacketizer.ILiveStreamPacketizer;
 
-public class ValidateToken 
+public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 {
 	private static final String TICKET_SERVICE_URL = "ticket-service-url";
 	private static final String STORE_SERVICE_URL = "store-service-url";
@@ -40,7 +46,7 @@ public class ValidateToken
 	private String ticketService;
 	private String storeService;
 	
-	public ValidateToken(IApplicationInstance appInstance)
+	public MenschAliasProvider(IApplicationInstance appInstance)
 	{
 		// Set URL for ticket web service
 		ticketService = appInstance.getProperties().getPropertyStr(TICKET_SERVICE_URL, this.ticketService);
@@ -220,5 +226,130 @@ public class ValidateToken
 		}
 		// Ticket not validated, return empty filename
 		return "";
+	}
+	
+	/**
+	 * Sets the stream alias based on the validation of the token, RTMP streaming.
+	 * 
+	 * @param appInstance
+	 * @param name
+	 * @param client
+	 * @return fileName
+	 */
+	@Override
+	public String resolvePlayAlias(IApplicationInstance appInstance, String name, IClient client) 
+	{		
+		logger.info("RTMP resolvePlayAlias Wowza values: Token = " + name + ", URL = " 
+		    + client.getPageUrl() + ", IP = " + client.getIp());
+		
+		try 
+		{
+			return validateToken(name, client.getPageUrl(), client.getIp());
+		} 
+		catch (Exception e) 
+		{
+			logger.error("Validate token RTMP exception", e);
+
+			return "";
+		}
+	}
+	
+	/**
+	 * Sets the stream alias based on the validation of the token, HTTP streaming.
+	 * 
+	 * @param appInstance
+	 * @param name
+	 * @param httpSession
+	 * @return fileName
+	 */
+	@Override
+	public String resolvePlayAlias(IApplicationInstance appInstance, String name, IHTTPStreamerSession httpSession)
+	{		
+		logger.info("HTTP resolvePlayAlias Wowza values: Token = " + name + ", URL = " 
+		    + httpSession.getReferrer() + ", IP = " + httpSession.getIpAddress());
+		
+		try 
+		{
+			return validateToken(name, httpSession.getReferrer(), httpSession.getIpAddress());
+		} 
+		catch (Exception e) 
+		{
+			logger.error("Validate token HTTP exception", e);
+			
+			//httpSession.rejectSession();
+			//httpSession.shutdown();
+			return "";
+		}
+	}
+	
+	/**
+	 * Required for IMediaStreamNameAliasProvider2 interface.
+	 * 
+	 * @param appInstance
+	 * @param name
+	 * @return name
+	 */
+	@Override
+	public String resolvePlayAlias(IApplicationInstance appInstance, String name) 
+	{
+		return null;
+	}
+	
+	/**
+	 * Required for IMediaStreamNameAliasProvider2 interface.
+	 * 
+	 * @param appInstance
+	 * @param name
+	 * @return name
+	 */
+	@Override
+	public String resolveStreamAlias(IApplicationInstance appInstance, String name) 
+	{
+		return null;
+	}
+	
+	/**
+	 * Required for IMediaStreamNameAliasProvider2 interface.
+	 * Resolves the play alias for RTSP/RTP streaming.
+	 * 
+	 * @param appInstance
+	 * @param name
+	 * @param rtpSession
+	 * @return name
+	 */
+	@Override
+	public String resolvePlayAlias(IApplicationInstance appInstance, String name, RTPSession rtpSession) 
+	{
+		return null;
+	}
+	
+	/**
+	 * Required for IMediaStreamNameAliasProvider2 interface.
+	 * Resolves the play alias for live stream packetizer.
+	 * 
+	 * @param appInstance
+	 * @param name
+	 * @param liveStreamPacketizer
+	 * @return name
+	 */
+	@Override
+	public String resolvePlayAlias(IApplicationInstance appInstance, String name, ILiveStreamPacketizer liveStreamPacketizer) 
+	{
+		return null;
+	}
+	
+	/**
+	 * Required for IMediaStreamNameAliasProvider2 interface.
+	 * Resolves the stream alias for MediaCaster.
+	 * 
+	 * @param appInstance
+	 * @param name
+	 * @param mediaCaster
+	 * @return name
+	 */
+	@Override
+	public String resolveStreamAlias(IApplicationInstance appInstance, String name, IMediaCaster mediaCaster) 
+	{
+		return null;
 	}
 }

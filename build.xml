@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
-<project name="ModuleTokenValidate" default="jar" basedir="..">
+<project name="ModuleMenschTickets" default="jar" basedir="..">
 	
 	<property name="wowza.lib.dir" value="C:/Program Files (x86)/Wowza Media Systems/Wowza Streaming Engine 4.2.0/lib"/>
-	<property name="jar.filename" value="ModuleTokenValidate.jar"/>
+	<property name="jar.filename" value="ModuleMenschTickets.jar"/>
 	<property name="core.build.dir" value="bin"/>
 
 	<target name="jar">

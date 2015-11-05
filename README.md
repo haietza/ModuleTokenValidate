@@ -18,8 +18,15 @@ Configurable file purge
 * Path: /Root/Application
 * Name: time-to-live
 * Type: Integer
-* Value: [desired number of days for files to stay on the Wowza server]
+* Value: [number of days for files to stay on the Wowza server]
 The default value is 30 days.
+
+Configurable file purge
+* Path: /Root/Application
+* Name: usable-space-percentage
+* Type: Integer
+* Value: [usable space as percentage of total space when file purging should take place]
+The default value is 25%.
 
 Configurable ticket web service URL
 * Path: /Root/Application
