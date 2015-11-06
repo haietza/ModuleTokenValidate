@@ -2,13 +2,11 @@
 
 This module calls a ticket web service with a token to get a hash value, a publishing outlet, a transcript, an IP address, and a URL for a valid media request. 
 It then validates the IP address and URL information obtained from the Wowza server play request against the information obtained from the ticket web service.
-If the validation fails, an access denied video is sent to the player.
+If the validation fails, the connection is rejected.
 If the validation passes, and the media file exists on the Wowza server, the content is sent to the player.
 If the media file does not exist, the store web service is called to retrieve the media file.
 
 The module also includes a file purge thread/task for server housekeeping.
-
-Need access-denied.mp4, access-denied.srt, and ModuleTokenValidate.jar files.
 
 Storage directory should be configured as sub-directory of /content in application.
 

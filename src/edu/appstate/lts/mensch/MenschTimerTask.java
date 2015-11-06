@@ -23,6 +23,7 @@ public class MenschTimerTask extends TimerTask
 	private static final String USABLE_SPACE = "usable-space-percentage";
 	// Set default number of days for files to stay on Wowza server.
 	private int timeToLive = 30;
+	// Set default percentage of usable space to start file purge.
 	private int usableSpace = 25;
 	
 	private IApplicationInstance appInstance;
@@ -58,14 +59,14 @@ public class MenschTimerTask extends TimerTask
 		// If last modified date is more than TTL days ago, delete the file from Wowza
 		File directory = new File(appInstance.getStreamStorageDir());
 		
-		logger.info("Storage directory: " + directory.getName());
-		logger.info("Total space: " + directory.getTotalSpace());
-		logger.info("Usable space: " + directory.getUsableSpace());
+		logger.info(String.format("Storage directory: %s", directory.getName()));
+		logger.info(String.format("Total space: %s", directory.getTotalSpace()));
+		logger.info(String.format("Usable space: %s", directory.getUsableSpace()));
 		
 		if (directory.getUsableSpace() < (directory.getTotalSpace() / (usableSpace / 100)))
 		{
-			logger.info("Usable space is less than " + usableSpace + "% of total space.");
-			logger.info("Purging files over " + timeToLive + " days old.");
+			logger.info(String.format("Usable space is less than %d% of total space.", usableSpace));
+			logger.info(String.format("Purging files over %d days old.", timeToLive));
 			
 			files = directory.listFiles();
 			longDays = (long) timeToLive * 86400000;
@@ -77,10 +78,10 @@ public class MenschTimerTask extends TimerTask
 			// Iterate through current media streams to get MP4 filename and SRT filename of each
 			for (int m = 0, h = 0; m < mediaStreams.size() && h < httpStreams.size(); m++, h++)
 			{
-				logger.info("Current media stream " + m + ": " + mediaStreams.get(m).getName());
-				logger.info("Current HTTP stream " + h + ": " + httpStreams.get(h).getStreamName());
-				logger.info("Current media stream SRT " + m + ": " + mediaStreams.get(m).getName().substring(0,mediaStreams.get(m).getName().length() - 4).concat(".srt"));
-				logger.info("Current HTTP stream SRT " + h + ": " + httpStreams.get(h).getStreamName().substring(0,httpStreams.get(h).getStreamName().length() - 4).concat(".srt"));
+				logger.info(String.format("Current media stream %d: %s", m, mediaStreams.get(m).getName()));
+				logger.info(String.format("Current HTTP stream %d: %s", h, httpStreams.get(h).getStreamName()));
+				logger.info(String.format("Current media stream SRT %d: %s.srt", m, mediaStreams.get(m).getName().substring(0,mediaStreams.get(m).getName().length() - 4)));
+				logger.info(String.format("Current HTTP stream SRT %d: %s.srt", h, httpStreams.get(h).getStreamName().substring(0,httpStreams.get(h).getStreamName().length() - 4)));
 				
 				// Iterate through files in Wowza content directory
 				// Check if a file, older than timeToLive, required file, or current stream MP4 or SRT
@@ -97,14 +98,14 @@ public class MenschTimerTask extends TimerTask
 							&& !files[j].getName().equals(mediaStreams.get(m).getName().substring(0,mediaStreams.get(m).getName().length() - 4).concat(".srt"))
 							&& !files[j].getName().equals(httpStreams.get(h).getStreamName().substring(0,httpStreams.get(h).getStreamName().length() - 4).concat(".srt")))
 					{
-						logger.info("File " + files[j].getName() + " last modified " + modified.toString() + ". File will be deleted.");
-						logger.info(files[j].getName() + " is " + files[j].length());
+						logger.info(String.format("File %s last modified %s. File will be deleted.", files[j].getName(), modified.toString()));
+						logger.info(String.format("%s is %d", files[j].getName(), files[j].length()));
 						files[j].delete();
 					}
 					else
 					{
-						logger.info("File " + files[j].getName() + " last modified " + modified.toString() + ", is in use, or it is required. File will not be deleted.");
-						logger.info(files[j].getName() + " is " + files[j].length());
+						logger.info(String.format("File %s last modified %s, is in use, or it is required. File will not be deleted.", files[j].getName(), modified.toString()));
+						logger.info(String.format("%s is %d", files[j].getName(), files[j].length()));
 					}
 				}
 			}
@@ -122,10 +123,10 @@ public class MenschTimerTask extends TimerTask
 			// Iterate through current media streams to get MP4 filename and SRT filename of each
 			for (int m = 0, h = 0; m < mediaStreams.size() && h < httpStreams.size(); m++, h++)
 			{
-				logger.info("Current media stream " + m + ": " + mediaStreams.get(m).getName());
-				logger.info("Current HTTP stream " + h + ": " + httpStreams.get(h).getStreamName());
-				logger.info("Current media stream SRT " + m + ": " + mediaStreams.get(m).getName().substring(0,mediaStreams.get(m).getName().length() - 4).concat(".srt"));
-				logger.info("Current HTTP stream SRT " + h + ": " + httpStreams.get(h).getStreamName().substring(0,httpStreams.get(h).getStreamName().length() - 4).concat(".srt"));
+				logger.info(String.format("Current media stream %d: %s", m, mediaStreams.get(m).getName()));
+				logger.info(String.format("Current HTTP stream %d: %s", h, httpStreams.get(h).getStreamName()));
+				logger.info(String.format("Current media stream SRT %d: %s.srt", m, mediaStreams.get(m).getName().substring(0,mediaStreams.get(m).getName().length() - 4)));
+				logger.info(String.format("Current HTTP stream SRT %d: %s.srt", h, httpStreams.get(h).getStreamName().substring(0,httpStreams.get(h).getStreamName().length() - 4)));
 				
 				// Iterate through files in Wowza content directory
 				// Check if a file, older than timeToLive, required file, or current stream MP4 or SRT
@@ -140,14 +141,14 @@ public class MenschTimerTask extends TimerTask
 						&& !files[j].getName().equals(mediaStreams.get(m).getName().substring(0,mediaStreams.get(m).getName().length() - 4).concat(".srt"))
 						&& !files[j].getName().equals(httpStreams.get(h).getStreamName().substring(0,httpStreams.get(h).getStreamName().length() - 4).concat(".srt")))
 					{
-						logger.info("File " + files[j].getName() + " will be deleted.");
-						logger.info(files[j].getName() + " is " + files[j].length());
+						logger.info(String.format("File %s will be deleted.", files[j].getName()));
+						logger.info(String.format("%s is %d.", files[j].getName(), files[j].length()));
 						files[j].delete();
 					}
 					else
 					{
-						logger.info("File " + files[j].getName() + " is required or in use. File will not be deleted.");
-						logger.info(files[j].getName() + " is " + files[j].length());
+						logger.info(String.format("File %s is required or in use. File will not be deleted.", files[j].getName()));
+						logger.info(String.format("%s is %d.", files[j].getName(), files[j].length()));
 					}
 				}
 			}

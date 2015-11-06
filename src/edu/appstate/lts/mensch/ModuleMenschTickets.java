@@ -12,7 +12,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 /**
- * Class to validate tokens for file access/playback for Wowza streaming server.
+ * Module to validate tokens for file access/playback for Wowza streaming server.
  * 
  * @author Michelle Melton
  * @version Sep 2015
@@ -38,7 +38,7 @@ public class ModuleMenschTickets extends ModuleBase
 	 */
 	public void onAppStart(IApplicationInstance appInstance) 
 	{
-		getLogger().info("onAppStart: " + appInstance.getApplication().getName() + "/" + appInstance.getName());
+		getLogger().info(String.format("onAppStart: %s/%s", appInstance.getApplication().getName(), appInstance.getName()));
 						
 		// Create alias provider and play the stream returned after validating the token
 		aliasProvider = new MenschAliasProvider(appInstance);
@@ -56,33 +56,41 @@ public class ModuleMenschTickets extends ModuleBase
 		}
 		catch (IllegalArgumentException e)
 		{
-			getLogger().error("Delay time was negative.", e);
+			getLogger().error(String.format("Delay time was negative: %s", e.getMessage()));
 		}
 		catch (IllegalStateException e)
 		{
-			getLogger().error("Task was already scheduled or cancelled.", e);
+			getLogger().error(String.format("Task was already scheduled or cancelled: %s", e.getMessage()));
 		}
 		catch (NullPointerException e)
 		{
-			getLogger().error("Task was null.", e);
+			getLogger().error(String.format("Task was null: %s", e.getMessage()));
 		}
 	}
 	
 	/**
-	 * On application stop, cancels the timer task to purge files and purges cancelled tasks.
+	 * On application stop, cancel the timer task to purge files and purge cancelled tasks.
 	 * @param appInstance
 	 */
 	public void onAppStop(IApplicationInstance appInstance) {
-		getLogger().info("onAppStop: " + appInstance.getApplication().getName() + "/" + appInstance.getName());
+		getLogger().info(String.format("onAppStop: %s/%s", appInstance.getApplication().getName(), appInstance.getName()));
 		
 		//timer.cancel();
 		//timer.purge();
 	}
 	
+	/**
+	 * On connect, check if token has been validated with file name.
+	 * If it has, accept connection.
+	 * If it has not (empty file name), shutdown the client.
+	 * 
+	 * @param client
+	 * @param function
+	 * @param params
+	 */
 	@SuppressWarnings("unchecked")
 	public void onConnect(IClient client, RequestFunction function, AMFDataList params) {
-		getLogger().info("onConnect: " + client.getClientId());
-		
+		getLogger().info(String.format("onConnect: %s", client.getClientId()));
 		List<IMediaStream> streams = client.getPlayStreams();
 		for (int i = 0; i < streams.size(); i++)
 		{

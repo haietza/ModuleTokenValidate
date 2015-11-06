@@ -30,6 +30,12 @@ import com.wowza.wms.rtp.model.RTPSession;
 import com.wowza.wms.stream.IMediaStreamNameAliasProvider2;
 import com.wowza.wms.stream.livepacketizer.ILiveStreamPacketizer;
 
+/**
+ * Class to validate tokens for file access/playback for Wowza streaming server.
+ * 
+ * @author Michelle Melton
+ * @version Sep 2015
+ */
 public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 {
 	private static final String TICKET_SERVICE_URL = "ticket-service-url";
@@ -46,6 +52,11 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 	private String ticketService;
 	private String storeService;
 	
+	/**
+	 * Constructor to get properties from application.
+	 * 
+	 * @param appInstance
+	 */
 	public MenschAliasProvider(IApplicationInstance appInstance)
 	{
 		// Set URL for ticket web service
@@ -69,10 +80,10 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 	 */
 	protected String validateToken(String token, String url, String ipAddress) 
 	{
-		logger.info("Arguments passed to validateToken from resolvePlayAlias: Token = " 
-				+ token + ", URL = " + url + ", IP = " + ipAddress);
-		logger.info("Ticket URL: " + ticketService);
-		logger.info("Store URL: " + storeService);
+		
+		logger.info(String.format("Arguments passed to validateToken from resolvePlayAlias: Token = %s, URL = %s, IP = %s", token, url, ipAddress));
+		logger.info(String.format("Ticket URL: %s", ticketService));
+		logger.info(String.format("Store URL: %s", storeService));
 		
 		// Do not attempt to validate token if ticket or store service URLs have not been configured
 		if (ticketService.isEmpty() || storeService.isEmpty())
@@ -107,35 +118,32 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 				}
 			}
 			
-			logger.info("Values received from web service: hash value = " + hashValue 
-					+ ", IP = " + ticketIpAddr + ", URL = " + ticketUrl);
+			logger.info(String.format("Values received from web service: hash value = %s, IP = %s, URL = %s", hashValue, ticketIpAddr, ticketUrl));
 		} 
 		catch (MalformedURLException e) 
 		{
-			logger.error("Malformed URL", e);
+			logger.error(String.format("Malformed URL: %s", e.getMessage()));
 		} 
 		catch (ParserConfigurationException e) 
 		{
-			logger.error("Parser configuration", e);
+			logger.error(String.format("Parser configuration: %s", e.getMessage()));
 		} 
 		catch (IOException e) 
 		{
-			logger.error("IOException", e);
+			logger.error(String.format("IOException: %s", e.getMessage()));
 		} 
 		catch (SAXException e) 
 		{
-			logger.error("SAXException", e);
+			logger.error(String.format("SAXException: %s", e.getMessage()));
 		}
 		
-		logger.info("Validate Wowza URL = " + url + " equals web service URL =  " 
-		    + ticketUrl + ": " + url.equalsIgnoreCase(ticketUrl));
-		logger.info("Validate Wowza IP = " + ipAddress + " equals web service IP = " 
-		    + ticketIpAddr + ": " + ipAddress.equalsIgnoreCase(ticketIpAddr));
+		logger.info(String.format("Validate Wowza URL = %s, equals web service URL = %s: %s", url, ticketUrl, url.equalsIgnoreCase(ticketUrl)));
+		logger.info(String.format("Validate Wowza IP = %s, equals web service IP = %s: %s", ipAddress, ticketIpAddr, ipAddress.equalsIgnoreCase(ticketIpAddr)));
 		
 		// Validate token
 		if (url.equalsIgnoreCase(ticketUrl) && ipAddress.equalsIgnoreCase(ticketIpAddr)) 
 		{
-			logger.info("Stream storage directory: " + appInstance.getStreamStorageDir());
+			logger.info(String.format("Stream storage directory: %s", appInstance.getStreamStorageDir()));
 			
 			// Save non-empty transcript text as SRT file
 			if (!transcript.isEmpty()) 
@@ -145,7 +153,8 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 				// Save to file
 				try
 				{
-					File scriptFile = new File(appInstance.getStreamStorageDir() + "/" + hashValue + ".srt");
+					
+					File scriptFile = new File(String.format("%s/%s.srt", appInstance.getStreamStorageDir(), hashValue));
 					FileWriter fileWriter = new FileWriter(scriptFile);
 					fileWriter.write(transcript);
 					fileWriter.flush();
@@ -153,19 +162,19 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 				}
 				catch (IOException e)
 				{
-					logger.error("FileWriter close IO exception", e);
+					logger.error(String.format("FileWriter close IO exception: %s", e.getMessage()));
 				}
 			}
 			
-			File mediaFile = new File(appInstance.getStreamStorageDir() + "/" + hashValue + ".mp4");
+			File mediaFile = new File(String.format("%s/%s.mp4", appInstance.getStreamStorageDir(), hashValue));
 			BufferedInputStream mediaIn = null;
 			FileOutputStream mediaFos = null;
 			
 			// Get existing filename from Wowza content directory
 			if (mediaFile.exists()) 
 			{
-				logger.info("File already on Wowza server: " + mediaFile.getName());
-				return "mp4:" + mediaFile.getName();
+				logger.info(String.format("File already on Wowza server: %s", mediaFile.getName()));
+				return String.format("mp4:%s", mediaFile.getName());
 				
 			}
 			// Get file from Mensch store
@@ -182,20 +191,20 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 					{
 						mediaFos.write(bytes, 0, read);
 					}
-					logger.info("File streamed from store service: " + hashValue + ".mp4");
-					return "mp4:" + hashValue + ".mp4";
+					logger.info(String.format("File streamed from store service: %s.mp4", hashValue));
+					return String.format("mp4:%s.mp4", hashValue);
 				} 
 				catch (MalformedURLException e) 
 				{
-					logger.error("Malformed URL", e);
+					logger.error(String.format("Malformed URL: %s", e.getMessage()));
 				} 
 				catch (FileNotFoundException e) 
 				{
-					logger.error("File not found", e);
+					logger.error(String.format("File not found: %s", e.getMessage()));
 				} 
 				catch (IOException e) 
 				{
-					logger.error("IO exception", e);
+					logger.error(String.format("IO exception: %s", e.getMessage()));
 				} 
 				finally 
 				{
@@ -207,7 +216,7 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 						} 
 						catch (IOException e) 
 						{
-							logger.error("Input stream close IO exception", e);
+							logger.error(String.format("Input stream close IO exception: %s", e.getMessage()));
 						}
 					}
 					if (mediaFos != null) 
@@ -218,7 +227,7 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 						} 
 						catch (IOException e) 
 						{
-							logger.error("Output stream close IO exception", e);
+							logger.error(String.format("Output stream close IO exception: %s", e.getMessage()));
 						}
 					}
 				}
@@ -239,8 +248,7 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 	@Override
 	public String resolvePlayAlias(IApplicationInstance appInstance, String name, IClient client) 
 	{		
-		logger.info("RTMP resolvePlayAlias Wowza values: Token = " + name + ", URL = " 
-		    + client.getPageUrl() + ", IP = " + client.getIp());
+		logger.info(String.format("RTMP resolvePlayAlias Wowza values: Token = %s, URL = %s, IP = %s", name, client.getPageUrl(), client.getIp()));
 		
 		try 
 		{
@@ -248,7 +256,7 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 		} 
 		catch (Exception e) 
 		{
-			logger.error("Validate token RTMP exception", e);
+			logger.error(String.format("Validate token RTMP exception: %s", e.getMessage()));
 
 			return "";
 		}
@@ -265,8 +273,7 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 	@Override
 	public String resolvePlayAlias(IApplicationInstance appInstance, String name, IHTTPStreamerSession httpSession)
 	{		
-		logger.info("HTTP resolvePlayAlias Wowza values: Token = " + name + ", URL = " 
-		    + httpSession.getReferrer() + ", IP = " + httpSession.getIpAddress());
+		logger.info(String.format("HTTP resolvePlayAlias Wowza values: Token = %s, URL = %s, IP = %s", name, httpSession.getReferrer(), httpSession.getIpAddress()));
 		
 		try 
 		{
@@ -274,7 +281,7 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 		} 
 		catch (Exception e) 
 		{
-			logger.error("Validate token HTTP exception", e);
+			logger.error(String.format("Validate token HTTP exception: %s", e.getMessage()));
 			
 			//httpSession.rejectSession();
 			//httpSession.shutdown();
