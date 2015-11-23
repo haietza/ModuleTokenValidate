@@ -78,7 +78,7 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 	 * @param ipAddress 
 	 * @return fileName 
 	 */
-	protected String validateToken(String token, String url, String ipAddress) 
+	private String validateToken(String token, String url, String ipAddress) 
 	{
 		
 		logger.info(String.format("Arguments passed to validateToken from resolvePlayAlias: Token = %s, URL = %s, IP = %s", token, url, ipAddress));
@@ -89,7 +89,7 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 		if (ticketService.isEmpty() || storeService.isEmpty())
 		{
 			logger.error("Ticket or store URL not configured.");
-			return "";
+			return null;
 		}
 		
 		// Get token info from ticket web service
@@ -123,18 +123,22 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 		catch (MalformedURLException e) 
 		{
 			logger.error(String.format("Malformed URL: %s", e.getMessage()));
+			return null;
 		} 
 		catch (ParserConfigurationException e) 
 		{
 			logger.error(String.format("Parser configuration: %s", e.getMessage()));
+			return null;
 		} 
 		catch (IOException e) 
 		{
 			logger.error(String.format("IOException: %s", e.getMessage()));
+			return null;
 		} 
 		catch (SAXException e) 
 		{
 			logger.error(String.format("SAXException: %s", e.getMessage()));
+			return null;
 		}
 		
 		logger.info(String.format("Validate Wowza URL = %s, equals web service URL = %s: %s", url, ticketUrl, url.equalsIgnoreCase(ticketUrl)));
@@ -163,6 +167,7 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 				catch (IOException e)
 				{
 					logger.error(String.format("FileWriter close IO exception: %s", e.getMessage()));
+					return null;
 				}
 			}
 			
@@ -197,14 +202,17 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 				catch (MalformedURLException e) 
 				{
 					logger.error(String.format("Malformed URL: %s", e.getMessage()));
+					return null;
 				} 
 				catch (FileNotFoundException e) 
 				{
 					logger.error(String.format("File not found: %s", e.getMessage()));
+					return null;
 				} 
 				catch (IOException e) 
 				{
 					logger.error(String.format("IO exception: %s", e.getMessage()));
+					return null;
 				} 
 				finally 
 				{
@@ -217,6 +225,7 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 						catch (IOException e) 
 						{
 							logger.error(String.format("Input stream close IO exception: %s", e.getMessage()));
+							return null;
 						}
 					}
 					if (mediaFos != null) 
@@ -228,13 +237,14 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 						catch (IOException e) 
 						{
 							logger.error(String.format("Output stream close IO exception: %s", e.getMessage()));
+							return null;
 						}
 					}
 				}
 			}
 		}
-		// Ticket not validated, return empty filename
-		return "";
+		// Ticket not validated, return null
+		return null;
 	}
 	
 	/**
@@ -250,16 +260,23 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 	{		
 		logger.info(String.format("RTMP resolvePlayAlias Wowza values: Token = %s, URL = %s, IP = %s", name, client.getPageUrl(), client.getIp()));
 		
+		String validateName = null;
 		try 
 		{
-			return validateToken(name, client.getPageUrl(), client.getIp());
+			validateName = validateToken(name, client.getPageUrl(), client.getIp());
+			if (validateName == null)
+			{
+				//client.rejectConnection();
+				client.setShutdownClient(true);
+				client.shutdownClient();
+			}
 		} 
 		catch (Exception e) 
 		{
 			logger.error(String.format("Validate token RTMP exception: %s", e.getMessage()));
-
-			return "";
+			return null;
 		}
+		return validateName;
 	}
 	
 	/**
@@ -275,31 +292,21 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 	{		
 		logger.info(String.format("HTTP resolvePlayAlias Wowza values: Token = %s, URL = %s, IP = %s", name, httpSession.getReferrer(), httpSession.getIpAddress()));
 		
+		String validateName = null;
 		try 
 		{
-			return validateToken(name, httpSession.getReferrer(), httpSession.getIpAddress());
+			validateName = validateToken(name, httpSession.getReferrer(), httpSession.getIpAddress());
+			if (validateName == null)
+			{
+				httpSession.shutdown();
+			}
 		} 
 		catch (Exception e) 
 		{
 			logger.error(String.format("Validate token HTTP exception: %s", e.getMessage()));
-			
-			//httpSession.rejectSession();
-			//httpSession.shutdown();
-			return "";
+			return null;
 		}
-	}
-	
-	/**
-	 * Required for IMediaStreamNameAliasProvider2 interface.
-	 * 
-	 * @param appInstance
-	 * @param name
-	 * @return name
-	 */
-	@Override
-	public String resolvePlayAlias(IApplicationInstance appInstance, String name) 
-	{
-		return null;
+		return validateName;
 	}
 	
 	/**
@@ -357,6 +364,12 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 	@Override
 	public String resolveStreamAlias(IApplicationInstance appInstance, String name, IMediaCaster mediaCaster) 
 	{
+		return null;
+	}
+
+	@Override
+	public String resolvePlayAlias(IApplicationInstance appInstance, String name) {
+		// TODO Auto-generated method stub
 		return null;
 	}
 }

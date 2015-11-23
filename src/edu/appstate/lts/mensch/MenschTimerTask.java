@@ -10,6 +10,7 @@ import com.wowza.wms.httpstreamer.model.IHTTPStreamerSession;
 import com.wowza.wms.logging.WMSLogger;
 import com.wowza.wms.logging.WMSLoggerFactory;
 import com.wowza.wms.stream.IMediaStream;
+import com.wowza.wms.stream.MediaStreamMap;
 
 /**
  * Class to purge files on Wowza streaming server.
@@ -29,11 +30,12 @@ public class MenschTimerTask extends TimerTask
 	private IApplicationInstance appInstance;
 	private WMSLogger logger;
 	private File[] files;
-	private Date modified;
-	private long age;
-	private long longDays;
+	//private long longDays;
 	private List<IMediaStream> mediaStreams;
-	private List<IHTTPStreamerSession> httpStreams;
+	Date keepDate;
+	Date modified;
+	boolean isPlaying;
+	//private List<IHTTPStreamerSession> httpStreams;
 	
 	/**
 	 * Constructor to create instance of file purge thread/task.
@@ -50,7 +52,8 @@ public class MenschTimerTask extends TimerTask
 	 * Overridden run method for TimerTask abstract class.
 	 */
 	@Override
-	public void run() {
+	public void run() 
+	{
 		// Set days for files to stay on server based on GUI config
 		timeToLive = appInstance.getProperties().getPropertyInt(TIME_TO_LIVE, timeToLive);
 		usableSpace = appInstance.getProperties().getPropertyInt(USABLE_SPACE, usableSpace);
@@ -59,44 +62,85 @@ public class MenschTimerTask extends TimerTask
 		// If last modified date is more than TTL days ago, delete the file from Wowza
 		File directory = new File(appInstance.getStreamStorageDir());
 		
+		logger.info("Days to live: " + timeToLive);
+		logger.info("Minimum space available percentage: " + usableSpace);
 		logger.info(String.format("Storage directory: %s", directory.getName()));
 		logger.info(String.format("Total space: %s", directory.getTotalSpace()));
 		logger.info(String.format("Usable space: %s", directory.getUsableSpace()));
+		logger.info("Usable space: " + directory.getUsableSpace() + " / Total space: " + directory.getTotalSpace() + " * 100 = " + (double) directory.getUsableSpace() / directory.getTotalSpace() * 100);
 		
-		if (directory.getUsableSpace() < (directory.getTotalSpace() / (usableSpace / 100)))
-		{
-			logger.info(String.format("Usable space is less than %d% of total space.", usableSpace));
-			logger.info(String.format("Purging files over %d days old.", timeToLive));
+		if ((((double) directory.getUsableSpace() / directory.getTotalSpace()) * 100) < usableSpace)
+		{			
+			logger.info(String.format("Usable space is less than %d percent of total space. Purging files over %d days old.", usableSpace, timeToLive));
 			
 			files = directory.listFiles();
-			longDays = (long) timeToLive * 86400000;
+			//longDays = (long) timeToLive * 86400000;
 			
 			// Get streams currently being played
 			mediaStreams = appInstance.getStreams().getStreams();
-			httpStreams = appInstance.getHTTPStreamerSessions();
 			
+			// Set date to keep files after
+			keepDate = new Date();
+			logger.info("Today keep date: " + keepDate.toString() + " long: " + keepDate.getTime());
+			keepDate.setTime(keepDate.getTime() - ((long) timeToLive * (long) 86400000));
+			logger.info("After set time keep date: " + keepDate.toString() + " long: " + keepDate.getTime());
+			logger.info("Keep date is today minus " + timeToLive + " * 86400000 = " + ((long) timeToLive * 86400000));
+			
+			for (int f = 0; f < files.length; f++)
+			{
+				isPlaying = false;
+				modified = new Date(files[f].lastModified());
+				logger.info("Keep date: " + keepDate.toString());
+				logger.info(files[f].getName() + " last modified: " + modified.toString());
+				for (int m = 0; m < mediaStreams.size() && !isPlaying; m++)
+				{
+					logger.info("Current media stream " + m + " is " + mediaStreams.get(m).getName());
+					if (files[f].getName().equals(mediaStreams.get(m).getName())
+						|| files[f].getName().equals(mediaStreams.get(m).getName().substring(0, mediaStreams.get(m).getName().length() - 4).concat(".srt")))
+						{
+							isPlaying = true;
+						}
+				}
+				if (!isPlaying && modified.before(keepDate))
+				{
+					logger.info("File " + files[f].getName() + " older than TTL and not in use. DELETING");
+					files[f].delete();
+				}
+				else if (isPlaying)
+				{
+					logger.info(files[f].getName() + " is in use. NOT DELETING");
+				}
+				else if (modified.after(keepDate))
+				{
+					logger.info(files[f].getName() + " newer than TTL. NOT DELETING");
+				}
+			}
+			
+			/*
 			// Iterate through current media streams to get MP4 filename and SRT filename of each
-			for (int m = 0, h = 0; m < mediaStreams.size() && h < httpStreams.size(); m++, h++)
+			for (int m = 0; m < mediaStreams.size(); m++)
 			{
 				logger.info(String.format("Current media stream %d: %s", m, mediaStreams.get(m).getName()));
-				logger.info(String.format("Current HTTP stream %d: %s", h, httpStreams.get(h).getStreamName()));
-				logger.info(String.format("Current media stream SRT %d: %s.srt", m, mediaStreams.get(m).getName().substring(0,mediaStreams.get(m).getName().length() - 4)));
-				logger.info(String.format("Current HTTP stream SRT %d: %s.srt", h, httpStreams.get(h).getStreamName().substring(0,httpStreams.get(h).getStreamName().length() - 4)));
+				//logger.info(String.format("Current HTTP stream %d: %s", h, httpStreams.get(h).getStreamName()));
+				logger.info(String.format("Current media stream SRT %d: %s .srt", m, mediaStreams.get(m).getName().substring(0, mediaStreams.get(m).getName().length() - 4)));
+				//logger.info(String.format("Current HTTP stream SRT %d: %s .srt", h, httpStreams.get(h).getStreamName().substring(0, httpStreams.get(h).getStreamName().length() - 4)));
 				
 				// Iterate through files in Wowza content directory
 				// Check if a file, older than timeToLive, required file, or current stream MP4 or SRT
+				
 				for (int j = 0; j < files.length; j++)
 				{
 					age = files[j].lastModified();
 					modified = new Date(age);
 					if (age > longDays 
-							&& files[j].isFile()
-							&& !files[j].getName().equals("wowzalogo.png")
-							&& !files[j].getName().equals("sample.mp4")
-							&& !files[j].getName().equals(mediaStreams.get(m).getName())
-							&& !files[j].getName().equals(httpStreams.get(h).getStreamName())
-							&& !files[j].getName().equals(mediaStreams.get(m).getName().substring(0,mediaStreams.get(m).getName().length() - 4).concat(".srt"))
-							&& !files[j].getName().equals(httpStreams.get(h).getStreamName().substring(0,httpStreams.get(h).getStreamName().length() - 4).concat(".srt")))
+						&& files[j].isFile()
+						&& !mediaStreams.get(m).isOpen()
+						//&& !files[j].getName().equals("wowzalogo.png")
+						//&& !files[j].getName().equals("sample.mp4")
+						&& !files[j].getName().equals(mediaStreams.get(m).getName())
+						//&& !files[j].getName().equals(httpStreams.get(h).getStreamName())
+						&& !files[j].getName().equals(mediaStreams.get(m).getName().substring(0, mediaStreams.get(m).getName().length() - 4).concat(".srt")))
+						//&& !files[j].getName().equals(httpStreams.get(h).getStreamName().substring(0, httpStreams.get(h).getStreamName().length() - 4).concat(".srt")))
 					{
 						logger.info(String.format("File %s last modified %s. File will be deleted.", files[j].getName(), modified.toString()));
 						logger.info(String.format("%s is %d", files[j].getName(), files[j].length()));
@@ -109,8 +153,10 @@ public class MenschTimerTask extends TimerTask
 					}
 				}
 			}
+			*/
 		}
-		
+				
+		/*
 		if (directory.getUsableSpace() < (directory.getTotalSpace() / 4))
 		{
 			logger.info("Usable space is STILL less than 25% of total space.");
@@ -153,5 +199,6 @@ public class MenschTimerTask extends TimerTask
 				}
 			}
 		}
+		*/
 	}
 }
