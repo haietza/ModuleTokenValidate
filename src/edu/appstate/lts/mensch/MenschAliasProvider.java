@@ -31,26 +31,33 @@ import com.wowza.wms.stream.IMediaStreamNameAliasProvider2;
 import com.wowza.wms.stream.livepacketizer.ILiveStreamPacketizer;
 
 /**
- * Class to validate tokens for file access/playback for Wowza streaming server.
+ * Class to validate token and provide alias.
  * 
  * @author Michelle Melton
- * @version Sep 2015
+ * @version 0.0.1
  */
 public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 {
-	private static final String TICKET_SERVICE_URL = "ticket-service-url";
-	private static final String STORE_SERVICE_URL = "store-service-url";
+	private static final String CFGNAME_TICKET_SERVICE_URL = "ticketServiceUrl";
+	private static final String CFGNAME_STORE_SERVICE_URL = "storeServiceUrl";
+	private static final String ERRSTR_INVALID_CFG = "Invalid configuration value: %s";
+	private static final String LOG_RESOLVEPLAYALIAS_RTMP = "RTMP resolvePlayAlias: token=%s, url=%s, ipaddr=%s";
+	private static final String LOG_RESOLVEPLAYALIAS_HTTP = "HTTP resolvePlayAlias: token=%s, url=%s, ipaddr=%s";
+	private static final String LOG_VALIDATETOKEN = "validateToken web service: hash=%s, url=%s, ipaddr=%s";
 	
 	private IApplicationInstance appInstance;
 	private WMSLogger logger;
+	
+	private String ticketServiceUrl;
+	private String storeServiceUrl;
+	
+	private String alias = null;
 	
 	private String hashValue;
 	// private String ticketOutlet;
 	private String ticketUrl;
 	private String ticketIpAddr;
 	private String transcript;
-	private String ticketService;
-	private String storeService;
 	
 	/**
 	 * Constructor to get properties from application.
@@ -59,13 +66,10 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 	 */
 	public MenschAliasProvider(IApplicationInstance appInstance)
 	{
-		// Set URL for ticket web service
-		ticketService = appInstance.getProperties().getPropertyStr(TICKET_SERVICE_URL, this.ticketService);
-		
-		// Set URL for ticket web service
-		storeService = appInstance.getProperties().getPropertyStr(STORE_SERVICE_URL, this.storeService);
-		
+		// Set application instance to the one called by ModuleMenschTickets
 		this.appInstance = appInstance;
+		
+		// Set the logger for the application instance
 		logger = WMSLoggerFactory.getLoggerObj(appInstance);
 	}
 	
@@ -80,23 +84,29 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 	 */
 	private String validateToken(String token, String url, String ipAddress) 
 	{
-		
-		logger.info(String.format("Arguments passed to validateToken from resolvePlayAlias: Token = %s, URL = %s, IP = %s", token, url, ipAddress));
-		logger.info(String.format("Ticket URL: %s", ticketService));
-		logger.info(String.format("Store URL: %s", storeService));
-		
-		// Do not attempt to validate token if ticket or store service URLs have not been configured
-		if (ticketService.isEmpty() || storeService.isEmpty())
+		// Fetch and validate needed application configs
+		ticketServiceUrl = appInstance.getProperties().getPropertyStr(CFGNAME_TICKET_SERVICE_URL);
+		if (ticketServiceUrl.isEmpty())
 		{
-			logger.error("Ticket or store URL not configured.");
+			logger.error(String.format(ERRSTR_INVALID_CFG, CFGNAME_TICKET_SERVICE_URL));
 			return null;
 		}
+		
+		storeServiceUrl = appInstance.getProperties().getPropertyStr(CFGNAME_STORE_SERVICE_URL);
+		if (storeServiceUrl.isEmpty())
+		{
+			logger.error(String.format(ERRSTR_INVALID_CFG, CFGNAME_STORE_SERVICE_URL));
+			return null;
+		}
+		
+		logger.info("Ticket URL: " + ticketServiceUrl);
+		logger.info("Store URL: " + storeServiceUrl);
 		
 		// Get token info from ticket web service
 		// URL class checks format of ticket service URL
 		try 
 		{
-			URL ticket = new URL(ticketService + token);
+			URL ticket = new URL(ticketServiceUrl + token);
 			HttpURLConnection connection = (HttpURLConnection) ticket.openConnection();
 			connection.setRequestMethod("GET");
 			connection.setRequestProperty("Accept", "application/xml");
@@ -118,46 +128,39 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 				}
 			}
 			
-			logger.info(String.format("Values received from web service: hash value = %s, IP = %s, URL = %s", hashValue, ticketIpAddr, ticketUrl));
+			logger.info(String.format(LOG_VALIDATETOKEN, hashValue, ticketUrl, ticketIpAddr));
 		} 
 		catch (MalformedURLException e) 
 		{
-			logger.error(String.format("Malformed URL: %s", e.getMessage()));
-			return null;
+			logger.error("validateToken ticket service", e);
 		} 
 		catch (ParserConfigurationException e) 
 		{
-			logger.error(String.format("Parser configuration: %s", e.getMessage()));
-			return null;
+			logger.error("validateToken ticket service", e);
 		} 
 		catch (IOException e) 
 		{
-			logger.error(String.format("IOException: %s", e.getMessage()));
-			return null;
+			logger.error("validateToken ticket service", e);
 		} 
 		catch (SAXException e) 
 		{
-			logger.error(String.format("SAXException: %s", e.getMessage()));
-			return null;
+			logger.error("validateToken ticket service", e);
 		}
 		
-		logger.info(String.format("Validate Wowza URL = %s, equals web service URL = %s: %s", url, ticketUrl, url.equalsIgnoreCase(ticketUrl)));
-		logger.info(String.format("Validate Wowza IP = %s, equals web service IP = %s: %s", ipAddress, ticketIpAddr, ipAddress.equalsIgnoreCase(ticketIpAddr)));
+		logger.info(String.format("validateToken: url=%s, ip=%s", url.equalsIgnoreCase(ticketUrl), ipAddress.equalsIgnoreCase(ticketIpAddr)));
 		
 		// Validate token
 		if (url.equalsIgnoreCase(ticketUrl) && ipAddress.equalsIgnoreCase(ticketIpAddr)) 
-		{
-			logger.info(String.format("Stream storage directory: %s", appInstance.getStreamStorageDir()));
-			
+		{			
 			// Save non-empty transcript text as SRT file
 			if (!transcript.isEmpty()) 
 			{
 				// Decode -->
 				transcript = transcript.replaceAll("--&gt;", "-->");
+				
 				// Save to file
 				try
 				{
-					
 					File scriptFile = new File(String.format("%s/%s.srt", appInstance.getStreamStorageDir(), hashValue));
 					FileWriter fileWriter = new FileWriter(scriptFile);
 					fileWriter.write(transcript);
@@ -166,8 +169,7 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 				}
 				catch (IOException e)
 				{
-					logger.error(String.format("FileWriter close IO exception: %s", e.getMessage()));
-					return null;
+					logger.error("Write transcript", e);
 				}
 			}
 			
@@ -178,7 +180,7 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 			// Get existing filename from Wowza content directory
 			if (mediaFile.exists()) 
 			{
-				logger.info(String.format("File already on Wowza server: %s", mediaFile.getName()));
+				logger.info(String.format("File %s on server", mediaFile.getName()));
 				return String.format("mp4:%s", mediaFile.getName());
 				
 			}
@@ -188,7 +190,7 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 			{
 				try 
 				{
-					mediaIn = new BufferedInputStream(new URL(storeService + hashValue).openStream());
+					mediaIn = new BufferedInputStream(new URL(storeServiceUrl + hashValue).openStream());
 					mediaFos = new FileOutputStream(mediaFile, true);
 					int read = 0;
 					byte[] bytes = new byte[1024];
@@ -196,23 +198,20 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 					{
 						mediaFos.write(bytes, 0, read);
 					}
-					logger.info(String.format("File streamed from store service: %s.mp4", hashValue));
+					logger.info(String.format("File %s streamed from store service", mediaFile.getName()));
 					return String.format("mp4:%s.mp4", hashValue);
 				} 
 				catch (MalformedURLException e) 
 				{
-					logger.error(String.format("Malformed URL: %s", e.getMessage()));
-					return null;
+					logger.error("Stream file from store service", e);
 				} 
 				catch (FileNotFoundException e) 
 				{
-					logger.error(String.format("File not found: %s", e.getMessage()));
-					return null;
+					logger.error("Stream file from store service", e);
 				} 
 				catch (IOException e) 
 				{
-					logger.error(String.format("IO exception: %s", e.getMessage()));
-					return null;
+					logger.error("Stream file from store service", e);
 				} 
 				finally 
 				{
@@ -224,8 +223,7 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 						} 
 						catch (IOException e) 
 						{
-							logger.error(String.format("Input stream close IO exception: %s", e.getMessage()));
-							return null;
+							logger.error("Stream file from store service", e);
 						}
 					}
 					if (mediaFos != null) 
@@ -236,100 +234,98 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 						} 
 						catch (IOException e) 
 						{
-							logger.error(String.format("Output stream close IO exception: %s", e.getMessage()));
-							return null;
+							logger.error("Stream file from store service", e);
 						}
 					}
 				}
 			}
 		}
+		
 		// Ticket not validated, return null
 		return null;
 	}
 	
 	/**
-	 * Sets the stream alias based on the validation of the token, RTMP streaming.
+	 * Required for IMediaStreamNameAliasProvider2 interface
+	 * Resolves the play alias
+	 * 
+	 * @param appInstance
+	 * @param name
+	 * @return alias
+	 */
+	@Override
+	public String resolvePlayAlias(IApplicationInstance appInstance, String name) {
+		return null;
+	}
+	
+	/**
+	 * Sets the play alias based on the validation of the token, RTMP streaming
 	 * 
 	 * @param appInstance
 	 * @param name
 	 * @param client
-	 * @return fileName
+	 * @return alias
 	 */
 	@Override
 	public String resolvePlayAlias(IApplicationInstance appInstance, String name, IClient client) 
 	{		
-		logger.info(String.format("RTMP resolvePlayAlias Wowza values: Token = %s, URL = %s, IP = %s", name, client.getPageUrl(), client.getIp()));
-		
-		String validateName = null;
+		logger.info(String.format(LOG_RESOLVEPLAYALIAS_RTMP, name, client.getPageUrl(), client.getIp()));
+			
 		try 
 		{
-			validateName = validateToken(name, client.getPageUrl(), client.getIp());
-			if (validateName == null)
+			alias = validateToken(name, client.getPageUrl(), client.getIp());
+			if (alias == null)
 			{
-				//client.rejectConnection();
 				client.setShutdownClient(true);
 				client.shutdownClient();
 			}
 		} 
 		catch (Exception e) 
 		{
-			logger.error(String.format("Validate token RTMP exception: %s", e.getMessage()));
-			return null;
+			logger.error("validateToken", e);
+			client.setShutdownClient(true);
+			client.shutdownClient();
 		}
-		return validateName;
+		return alias;
 	}
 	
 	/**
-	 * Sets the stream alias based on the validation of the token, HTTP streaming.
+	 * Sets the play alias based on the validation of the token, HTTP streaming
 	 * 
 	 * @param appInstance
 	 * @param name
 	 * @param httpSession
-	 * @return fileName
+	 * @return alias
 	 */
 	@Override
 	public String resolvePlayAlias(IApplicationInstance appInstance, String name, IHTTPStreamerSession httpSession)
 	{		
-		logger.info(String.format("HTTP resolvePlayAlias Wowza values: Token = %s, URL = %s, IP = %s", name, httpSession.getReferrer(), httpSession.getIpAddress()));
+		logger.info(String.format(LOG_RESOLVEPLAYALIAS_HTTP, name, httpSession.getReferrer(), httpSession.getIpAddress()));
 		
-		String validateName = null;
 		try 
 		{
-			validateName = validateToken(name, httpSession.getReferrer(), httpSession.getIpAddress());
-			if (validateName == null)
+			alias = validateToken(name, httpSession.getReferrer(), httpSession.getIpAddress());
+			if (alias == null)
 			{
 				httpSession.shutdown();
 			}
 		} 
 		catch (Exception e) 
 		{
-			logger.error(String.format("Validate token HTTP exception: %s", e.getMessage()));
-			return null;
+			logger.error("validateToken", e);
+			httpSession.shutdown();
 		}
-		return validateName;
+		return alias;
 	}
 	
 	/**
-	 * Required for IMediaStreamNameAliasProvider2 interface.
-	 * 
-	 * @param appInstance
-	 * @param name
-	 * @return name
-	 */
-	@Override
-	public String resolveStreamAlias(IApplicationInstance appInstance, String name) 
-	{
-		return null;
-	}
-	
-	/**
-	 * Required for IMediaStreamNameAliasProvider2 interface.
-	 * Resolves the play alias for RTSP/RTP streaming.
+	 * Required for IMediaStreamNameAliasProvider2 interface
+	 * Resolves the play alias for RTSP/RTP streaming
 	 * 
 	 * @param appInstance
 	 * @param name
 	 * @param rtpSession
-	 * @return name
+	 * @return alias
 	 */
 	@Override
 	public String resolvePlayAlias(IApplicationInstance appInstance, String name, RTPSession rtpSession) 
@@ -338,13 +334,13 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 	}
 	
 	/**
-	 * Required for IMediaStreamNameAliasProvider2 interface.
-	 * Resolves the play alias for live stream packetizer.
+	 * Required for IMediaStreamNameAliasProvider2 interface
+	 * Resolves the play alias for live stream packetizer
 	 * 
 	 * @param appInstance
 	 * @param name
 	 * @param liveStreamPacketizer
-	 * @return name
+	 * @return alias
 	 */
 	@Override
 	public String resolvePlayAlias(IApplicationInstance appInstance, String name, ILiveStreamPacketizer liveStreamPacketizer) 
@@ -353,23 +349,31 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 	}
 	
 	/**
-	 * Required for IMediaStreamNameAliasProvider2 interface.
-	 * Resolves the stream alias for MediaCaster.
+	 * Required for IMediaStreamNameAliasProvider2 interface
+	 * Resolves the stream alias
+	 * 
+	 * @param appInstance
+	 * @param name
+	 * @return alias
+	 */
+	@Override
+	public String resolveStreamAlias(IApplicationInstance appInstance, String name) 
+	{
+		return null;
+	}
+	
+	/**
+	 * Required for IMediaStreamNameAliasProvider2 interface
+	 * Resolves the stream alias for MediaCaster
 	 * 
 	 * @param appInstance
 	 * @param name
 	 * @param mediaCaster
-	 * @return name
+	 * @return alias
 	 */
 	@Override
 	public String resolveStreamAlias(IApplicationInstance appInstance, String name, IMediaCaster mediaCaster) 
 	{
-		return null;
-	}
-
-	@Override
-	public String resolvePlayAlias(IApplicationInstance appInstance, String name) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 }

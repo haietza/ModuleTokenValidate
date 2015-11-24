@@ -6,16 +6,20 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 /**
- * Module to validate tokens for file access/playback for Wowza streaming server.
+ * Wowza Streaming Engine module to validate Appalachian State Mensch stream
+ * tickets (query string tokens). Also provides media retrieval from store
+ * and cache housekeeping.
  * 
  * @author Michelle Melton
- * @version Sep 2015
+ * @version 0.0.1
  */
 public class ModuleMenschTickets extends ModuleBase  
 {
-	private TimerTask menschTimerTask;
+	// Instance of the timer for periodic housekeeping
 	// Create new Timer object once instead of creating a new object every time the application starts
 	private Timer timer = new Timer(true);
+	
+	private TimerTask menschTimerTask;
 	
 	/**
 	 * API method for start of application; sets the stream alias based on token validation.
@@ -26,7 +30,8 @@ public class ModuleMenschTickets extends ModuleBase
 	{
 		getLogger().info(String.format("onAppStart: %s/%s", appInstance.getApplication().getName(), appInstance.getName()));
 						
-		// Create alias provider and play the stream returned after validating the token
+		// Notify application instance that MenschAliasProvider will provide stream name aliasing
+		// to call our implementations of resolvePlayAlias
 		appInstance.setStreamNameAliasProvider(new MenschAliasProvider(appInstance));
 		
 		// Purge files thread/task to perform housekeeping on server
@@ -58,7 +63,7 @@ public class ModuleMenschTickets extends ModuleBase
 	 */
 	public void onAppStop(IApplicationInstance appInstance) {
 		getLogger().info(String.format("onAppStop: %s/%s", appInstance.getApplication().getName(), appInstance.getName()));
-		
+		getLogger().info("Cancelling and purging MenschTimerTask.");
 		timer.cancel();
 		timer.purge();
 	}
