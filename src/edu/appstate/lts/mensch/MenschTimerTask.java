@@ -66,7 +66,7 @@ public class MenschTimerTask extends TimerTask
 		// If usable space is less than GUI config, purge files older than TTL that are not playing
 		if ((((double) directory.getUsableSpace() / directory.getTotalSpace()) * 100) < usableSpace)
 		{			
-			logger.info(String.format("Usable space is less than %d; purging files over %d days old and not playing.", usableSpace, timeToLive));
+			logger.info(String.format("Usable space under %d; purging closed files over %d days old.", usableSpace, timeToLive));
 			
 			files = directory.listFiles();
 			
@@ -91,12 +91,12 @@ public class MenschTimerTask extends TimerTask
 				}
 				if (!isPlaying && modified.before(keepDate))
 				{
-					logger.info(String.format("Deleting %s: older than TTL and not in use.", files[f].getName()));
+					logger.info(String.format("Deleting %s: closed and older than TTL.", files[f].getName()));
 					files[f].delete();
 				}
 				else if (isPlaying)
 				{
-					logger.info(String.format("Not deleting %s: in use.", files[f].getName()));
+					logger.info(String.format("Not deleting %s: open.", files[f].getName()));
 				}
 				else if (modified.after(keepDate))
 				{
@@ -104,11 +104,15 @@ public class MenschTimerTask extends TimerTask
 				}
 			}
 		}
+		else
+		{
+			logger.info(String.format("Usable space over %d.", usableSpace));
+		}
 		
 		// If usable space is still less than GUI config, purge files that are not playing
 		if ((((double) directory.getUsableSpace() / directory.getTotalSpace()) * 100) < usableSpace)
 		{			
-			logger.info(String.format("Usable space is still less than %d; purging files not playing.", usableSpace));
+			logger.info(String.format("Usable space still under %d; purging closed files.", usableSpace));
 			
 			files = directory.listFiles();
 			
@@ -128,12 +132,12 @@ public class MenschTimerTask extends TimerTask
 				}
 				if (!isPlaying)
 				{
-					logger.info(String.format("Deleting %s: not in use.", files[f].getName()));
+					logger.info(String.format("Deleting %s: closed.", files[f].getName()));
 					files[f].delete();
 				}
 				else if (isPlaying)
 				{
-					logger.info(String.format("Not deleting %s: in use.", files[f].getName()));
+					logger.info(String.format("Not deleting %s: open.", files[f].getName()));
 				}
 			}
 		}

@@ -99,9 +99,6 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 			return null;
 		}
 		
-		logger.info("Ticket URL: " + ticketServiceUrl);
-		logger.info("Store URL: " + storeServiceUrl);
-		
 		// Get token info from ticket web service
 		// URL class checks format of ticket service URL
 		try 

@@ -14,9 +14,18 @@ import java.util.Timer;
  */
 public class ModuleMenschTickets extends ModuleBase  
 {
+	private static final String TIMER_DELAY = "timerDelay";
+	private static final String TIMER_PERIOD = "timerPeriod";
+	
 	// Instance of the timer for periodic housekeeping
 	// Create new Timer object once instead of creating a new object every time the application starts
 	private Timer timer = new Timer(true);
+	
+	// Default timer task delay is 10 seconds.
+	private long timerDelay = 10 * 1000;
+	
+	//Default timer task repeating period is 3 minutes;
+	private long timerPeriod = 3 * 60 * 1000;
 	
 	private MenschTimerTask menschTimerTask;
 	
@@ -39,21 +48,23 @@ public class ModuleMenschTickets extends ModuleBase
 				
 		try 
 		{
-			// Start after 10 seconds, repeat every 3 minutes
-			getLogger().info("File purge starting in 10 seconds.");
-			timer.schedule(menschTimerTask, 10000, 180000);
+			// Get and set timer delay and period from GUI app properties
+			timerDelay = appInstance.getProperties().getPropertyInt(TIMER_DELAY, (int) timerDelay) * 1000;
+			timerPeriod = appInstance.getProperties().getPropertyInt(TIMER_PERIOD, (int) timerPeriod) * 60 * 1000;
+			getLogger().info(String.format("menschTimerTask starting in %d seconds, recurring every %d minutes.", (timerDelay / 1000), (timerPeriod / 60000)));
+			timer.schedule(menschTimerTask, timerDelay, timerPeriod);
 		}
 		catch (IllegalArgumentException e)
 		{
-			getLogger().error(String.format("Delay time was negative: %s", e.getMessage()));
+			getLogger().error("menschTimerTask", e);
 		}
 		catch (IllegalStateException e)
 		{
-			getLogger().error(String.format("Task was already scheduled or cancelled: %s", e.getMessage()));
+			getLogger().error("menschTimerTask", e);
 		}
 		catch (NullPointerException e)
 		{
-			getLogger().error(String.format("Task was null: %s", e.getMessage()));
+			getLogger().error("menschTimerTask", e);
 		}
 	}
 	
@@ -63,7 +74,7 @@ public class ModuleMenschTickets extends ModuleBase
 	 */
 	public void onAppStop(IApplicationInstance appInstance) {
 		getLogger().info(String.format("onAppStop: %s/%s", appInstance.getApplication().getName(), appInstance.getName()));
-		getLogger().info("Cancelling MenschTimerTask.");
+		getLogger().info("Cancelling menschTimerTask.");
 		menschTimerTask.cancel();
 		timer.cancel();
 	}

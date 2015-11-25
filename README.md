@@ -14,19 +14,33 @@ This module is tested to work for both RTMP/Flash and HTTP streaming for iOS.
 
 Module Custom Properties
 
-Configurable file purge
+Configurable file purge days to live
 * Path: /Root/Application
 * Name: daysToLive
 * Type: Integer
 * Value: [number of days for files to stay on the Wowza server]
 The default value is 30 days.
 
-Configurable file purge
+Configurable file purge usable space
 * Path: /Root/Application
 * Name: usableSpacePercent
 * Type: Integer
 * Value: [usable space as percentage of total space when file purging should take place]
 The default value is 25%.
+
+Configurable file purge task delay
+* Path: /Root/Application
+* Name: taskDelay
+* Type: Integer
+* Value: [delay in seconds before file purge task starts]
+The default value is 10 seconds.
+
+Configurable file purge task period
+* Path: /Root/Application
+* Name: taskPeriod
+* Type: Integer
+* Value: [period in minutes for the repeated task execution]
+The default value is 3 minutes.
 
 Configurable ticket web service URL
 * Path: /Root/Application
