@@ -66,7 +66,7 @@ public class MenschTimerTask extends TimerTask
 		// If usable space is less than GUI config, purge files older than TTL that are not playing
 		if ((((double) directory.getUsableSpace() / directory.getTotalSpace()) * 100) < usableSpace)
 		{			
-			logger.info(String.format("Usable space under %d; purging closed files over %d days old.", usableSpace, timeToLive));
+			logger.info(String.format("Usable space under %d percent; purging closed files over %d days old.", usableSpace, timeToLive));
 			
 			files = directory.listFiles();
 			
@@ -106,13 +106,13 @@ public class MenschTimerTask extends TimerTask
 		}
 		else
 		{
-			logger.info(String.format("Usable space over %d.", usableSpace));
+			logger.info(String.format("Usable space over %d percent.", usableSpace));
 		}
 		
 		// If usable space is still less than GUI config, purge files that are not playing
 		if ((((double) directory.getUsableSpace() / directory.getTotalSpace()) * 100) < usableSpace)
 		{			
-			logger.info(String.format("Usable space still under %d; purging closed files.", usableSpace));
+			logger.info(String.format("Usable space still under %d percent; purging closed files.", usableSpace));
 			
 			files = directory.listFiles();
 			
