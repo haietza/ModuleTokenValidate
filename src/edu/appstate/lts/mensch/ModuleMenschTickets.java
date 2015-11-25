@@ -3,7 +3,6 @@ package edu.appstate.lts.mensch;
 import com.wowza.wms.application.*;
 import com.wowza.wms.module.*;
 import java.util.Timer;
-import java.util.TimerTask;
 
 /**
  * Wowza Streaming Engine module to validate Appalachian State Mensch stream
@@ -19,7 +18,7 @@ public class ModuleMenschTickets extends ModuleBase
 	// Create new Timer object once instead of creating a new object every time the application starts
 	private Timer timer = new Timer(true);
 	
-	private TimerTask menschTimerTask;
+	private MenschTimerTask menschTimerTask;
 	
 	/**
 	 * API method for start of application; sets the stream alias based on token validation.
@@ -37,6 +36,7 @@ public class ModuleMenschTickets extends ModuleBase
 		// Purge files thread/task to perform housekeeping on server
 		// isDaemon set to true, so shutdown of application is not delayed by Timer
 		menschTimerTask = new MenschTimerTask(appInstance);
+				
 		try 
 		{
 			// Start after 10 seconds, repeat every 3 minutes
@@ -63,8 +63,8 @@ public class ModuleMenschTickets extends ModuleBase
 	 */
 	public void onAppStop(IApplicationInstance appInstance) {
 		getLogger().info(String.format("onAppStop: %s/%s", appInstance.getApplication().getName(), appInstance.getName()));
-		getLogger().info("Cancelling and purging MenschTimerTask.");
+		getLogger().info("Cancelling MenschTimerTask.");
+		menschTimerTask.cancel();
 		timer.cancel();
-		timer.purge();
 	}
 }

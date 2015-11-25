@@ -31,9 +31,10 @@ public class MenschTimerTask extends TimerTask
 	private WMSLogger logger;
 	private File[] files;
 	private List<IMediaStream> mediaStreams;
-	Date keepDate;
-	Date modified;
-	boolean isPlaying;
+	private Date keepDate;
+	private Date modified;
+	private boolean isPlaying;
+	private boolean isRunning = false;
 	
 	/**
 	 * Constructor to create instance of file purge thread/task.
@@ -52,6 +53,8 @@ public class MenschTimerTask extends TimerTask
 	@Override
 	public void run() 
 	{
+		isRunning = true;
+		
 		// Set days for files to stay on server based on GUI config
 		timeToLive = appInstance.getProperties().getPropertyInt(TIME_TO_LIVE, timeToLive);
 		usableSpace = appInstance.getProperties().getPropertyInt(USABLE_SPACE, usableSpace);
@@ -134,5 +137,12 @@ public class MenschTimerTask extends TimerTask
 				}
 			}
 		}
+		
+		isRunning = false;
+	}
+	
+	public boolean isRunning()
+	{
+		return isRunning;
 	}
 }

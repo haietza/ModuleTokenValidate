@@ -254,7 +254,8 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 	 * @return alias
 	 */
 	@Override
-	public String resolvePlayAlias(IApplicationInstance appInstance, String name) {
+	public String resolvePlayAlias(IApplicationInstance appInstance, String name) 
+	{
 		return null;
 	}
 	
