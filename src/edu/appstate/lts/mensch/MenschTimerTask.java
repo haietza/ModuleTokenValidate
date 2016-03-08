@@ -1,6 +1,11 @@
 package edu.appstate.lts.mensch;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
 import java.util.Date;
 import java.util.List;
 import java.util.TimerTask;
@@ -30,9 +35,14 @@ public class MenschTimerTask extends TimerTask
 	private IApplicationInstance appInstance;
 	private WMSLogger logger;
 	private File[] files;
+	private Path file;
+	private BasicFileAttributes attrs;
+	private FileTime accessed = attrs.lastAccessTime();
+	private Date current;
+	private FileTime today;
+	private FileTime keep ;
 	private List<IMediaStream> mediaStreams;
 	private Date keepDate;
-	private Date modified;
 	private boolean isPlaying;
 	private boolean isRunning = false;
 	
@@ -63,6 +73,36 @@ public class MenschTimerTask extends TimerTask
 		// If last modified date is more than TTL days ago, delete the file from Wowza
 		File directory = new File(appInstance.getStreamStorageDir());
 		
+		// Testing access file time
+		/*
+		files = directory.listFiles();
+		for (int f = 0; f < files.length; f++)
+		{
+			Path file = files[f].toPath();
+			try {
+				BasicFileAttributes attrs = Files.readAttributes(file, BasicFileAttributes.class);
+				
+				// File system of server must have last access enabled
+				FileTime accessed = attrs.lastAccessTime();
+				
+				Date current = new Date();
+				FileTime today = FileTime.fromMillis(current.getTime());
+				FileTime keep = FileTime.fromMillis((long) timeToLive * (long) 86400000 + accessed.toMillis());
+				
+				if (keep.compareTo(today) < 0)
+				{
+					logger.info("File older than 30 days, will be deleted.");
+				}
+				else
+				{
+					logger.info("File will be kept.");
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		*/
+		
 		// If usable space is less than GUI config, purge files older than TTL that are not playing
 		if ((((double) directory.getUsableSpace() / directory.getTotalSpace()) * 100) < usableSpace)
 		{			
@@ -80,27 +120,42 @@ public class MenschTimerTask extends TimerTask
 			for (int f = 0; f < files.length; f++)
 			{
 				isPlaying = false;
-				modified = new Date(files[f].lastModified());
-				for (int m = 0; m < mediaStreams.size() && !isPlaying; m++)
-				{
-					if (files[f].getName().equals(mediaStreams.get(m).getName())
-						|| files[f].getName().equals(mediaStreams.get(m).getName().substring(0, mediaStreams.get(m).getName().length() - 4).concat(".srt")))
-						{
-							isPlaying = true;
-						}
-				}
-				if (!isPlaying && modified.before(keepDate))
-				{
-					logger.info(String.format("Deleting %s: closed and older than TTL.", files[f].getName()));
-					files[f].delete();
-				}
-				else if (isPlaying)
-				{
-					logger.info(String.format("Not deleting %s: open.", files[f].getName()));
-				}
-				else if (modified.after(keepDate))
-				{
-					logger.info(String.format("Not deleting %s: newer than TTL.", files[f].getName()));
+				
+				file = files[f].toPath();
+				
+				try {
+					attrs = Files.readAttributes(file, BasicFileAttributes.class);
+					
+					// File system of server must have last access enabled
+					accessed = attrs.lastAccessTime();
+					
+					current = new Date();
+					today = FileTime.fromMillis(current.getTime());
+					keep = FileTime.fromMillis((long) timeToLive * (long) 86400000 + accessed.toMillis());
+					
+					for (int m = 0; m < mediaStreams.size() && !isPlaying; m++)
+					{
+						if (files[f].getName().equals(mediaStreams.get(m).getName())
+							|| files[f].getName().equals(mediaStreams.get(m).getName().substring(0, mediaStreams.get(m).getName().length() - 4).concat(".srt")))
+							{
+								isPlaying = true;
+							}
+					}
+					if (!isPlaying && keep.compareTo(today) < 0)
+					{
+						logger.info(String.format("Deleting %s: closed and older than TTL.", files[f].getName()));
+						files[f].delete();
+					}
+					else if (isPlaying)
+					{
+						logger.info(String.format("Not deleting %s: open.", files[f].getName()));
+					}
+					else if (keep.compareTo(today) >= 0)
+					{
+						logger.info(String.format("Not deleting %s: newer than TTL.", files[f].getName()));
+					}
+				} catch (IOException e) {
+					logger.error("MenschTimerTask run", e);
 				}
 			}
 		}
