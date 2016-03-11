@@ -2,6 +2,7 @@ package edu.appstate.lts.mensch;
 
 import com.wowza.wms.application.*;
 import com.wowza.wms.module.*;
+
 import java.util.Timer;
 
 /**
@@ -34,7 +35,7 @@ public class ModuleMenschTickets extends ModuleBase
 	 * 
 	 * @param appInstance 
 	 */
-	public void onAppStart(IApplicationInstance appInstance) 
+	public void onAppStart(IApplicationInstance appInstance)
 	{
 		getLogger().info(String.format("onAppStart: %s/%s", appInstance.getApplication().getName(), appInstance.getName()));
 						

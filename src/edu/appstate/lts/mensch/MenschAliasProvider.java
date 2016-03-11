@@ -144,7 +144,8 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 			logger.error("validateToken ticket service", e);
 		}
 		
-		logger.info(String.format("validateToken: url=%s, ip=%s", url.equalsIgnoreCase(ticketUrl), ipAddress.equalsIgnoreCase(ticketIpAddr)));
+		logger.info(String.format("validateToken: url=%s, ip=%s", url.equalsIgnoreCase(ticketUrl), 
+				ipAddress.equalsIgnoreCase(ticketIpAddr)));
 		
 		// Validate token
 		if (url.equalsIgnoreCase(ticketUrl) && ipAddress.equalsIgnoreCase(ticketIpAddr)) 
@@ -158,7 +159,8 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 				// Save to file
 				try
 				{
-					File scriptFile = new File(String.format("%s/%s.srt", appInstance.getStreamStorageDir(), hashValue));
+					File scriptFile = new File(String.format("%s/%s.srt", 
+							appInstance.getStreamStorageDir(), hashValue));
 					FileWriter fileWriter = new FileWriter(scriptFile);
 					fileWriter.write(transcript);
 					fileWriter.flush();
@@ -298,7 +300,8 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 	@Override
 	public String resolvePlayAlias(IApplicationInstance appInstance, String name, IHTTPStreamerSession httpSession)
 	{		
-		logger.info(String.format(LOG_RESOLVEPLAYALIAS_HTTP, name, httpSession.getReferrer(), httpSession.getIpAddress()));
+		logger.info(String.format(LOG_RESOLVEPLAYALIAS_HTTP, name, httpSession.getReferrer(), 
+				httpSession.getIpAddress()));
 		
 		try 
 		{
@@ -341,7 +344,8 @@ public class MenschAliasProvider implements IMediaStreamNameAliasProvider2
 	 * @return alias
 	 */
 	@Override
-	public String resolvePlayAlias(IApplicationInstance appInstance, String name, ILiveStreamPacketizer liveStreamPacketizer) 
+	public String resolvePlayAlias(IApplicationInstance appInstance, String name, 
+			ILiveStreamPacketizer liveStreamPacketizer) 
 	{
 		return null;
 	}

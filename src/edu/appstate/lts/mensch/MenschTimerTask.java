@@ -37,14 +37,12 @@ public class MenschTimerTask extends TimerTask
 	private File[] files;
 	private Path file;
 	private BasicFileAttributes attrs;
-	private FileTime accessed = attrs.lastAccessTime();
+	private FileTime accessed;
 	private Date current;
 	private FileTime today;
 	private FileTime keep ;
 	private List<IMediaStream> mediaStreams;
-	private Date keepDate;
 	private boolean isPlaying;
-	private boolean isRunning = false;
 	
 	/**
 	 * Constructor to create instance of file purge thread/task.
@@ -62,9 +60,7 @@ public class MenschTimerTask extends TimerTask
 	 */
 	@Override
 	public void run() 
-	{
-		isRunning = true;
-		
+	{				
 		// Set days for files to stay on server based on GUI config
 		timeToLive = appInstance.getProperties().getPropertyInt(TIME_TO_LIVE, timeToLive);
 		usableSpace = appInstance.getProperties().getPropertyInt(USABLE_SPACE, usableSpace);
@@ -73,49 +69,16 @@ public class MenschTimerTask extends TimerTask
 		// If last modified date is more than TTL days ago, delete the file from Wowza
 		File directory = new File(appInstance.getStreamStorageDir());
 		
-		// Testing access file time
-		/*
-		files = directory.listFiles();
-		for (int f = 0; f < files.length; f++)
-		{
-			Path file = files[f].toPath();
-			try {
-				BasicFileAttributes attrs = Files.readAttributes(file, BasicFileAttributes.class);
-				
-				// File system of server must have last access enabled
-				FileTime accessed = attrs.lastAccessTime();
-				
-				Date current = new Date();
-				FileTime today = FileTime.fromMillis(current.getTime());
-				FileTime keep = FileTime.fromMillis((long) timeToLive * (long) 86400000 + accessed.toMillis());
-				
-				if (keep.compareTo(today) < 0)
-				{
-					logger.info("File older than 30 days, will be deleted.");
-				}
-				else
-				{
-					logger.info("File will be kept.");
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-		*/
-		
 		// If usable space is less than GUI config, purge files older than TTL that are not playing
 		if ((((double) directory.getUsableSpace() / directory.getTotalSpace()) * 100) < usableSpace)
 		{			
-			logger.info(String.format("Usable space under %d percent; purging closed files over %d days old.", usableSpace, timeToLive));
+			logger.info(String.format("Usable space under %d percent; purging closed files over %d days old.", 
+					usableSpace, timeToLive));
 			
 			files = directory.listFiles();
 			
 			// Get streams currently being played
 			mediaStreams = appInstance.getStreams().getStreams();
-			
-			// Set date to keep files after
-			keepDate = new Date();
-			keepDate.setTime(keepDate.getTime() - ((long) timeToLive * (long) 86400000));
 			
 			for (int f = 0; f < files.length; f++)
 			{
@@ -131,12 +94,13 @@ public class MenschTimerTask extends TimerTask
 					
 					current = new Date();
 					today = FileTime.fromMillis(current.getTime());
-					keep = FileTime.fromMillis((long) timeToLive * (long) 86400000 + accessed.toMillis());
+					keep = FileTime.fromMillis(((long) timeToLive * (long) 86400000) + accessed.toMillis());
 					
 					for (int m = 0; m < mediaStreams.size() && !isPlaying; m++)
 					{
 						if (files[f].getName().equals(mediaStreams.get(m).getName())
-							|| files[f].getName().equals(mediaStreams.get(m).getName().substring(0, mediaStreams.get(m).getName().length() - 4).concat(".srt")))
+							|| files[f].getName().equals(mediaStreams.get(m).getName().substring(0, 
+									mediaStreams.get(m).getName().length() - 4).concat(".srt")))
 							{
 								isPlaying = true;
 							}
@@ -180,7 +144,8 @@ public class MenschTimerTask extends TimerTask
 				for (int m = 0; m < mediaStreams.size() && !isPlaying; m++)
 				{
 					if (files[f].getName().equals(mediaStreams.get(m).getName())
-						|| files[f].getName().equals(mediaStreams.get(m).getName().substring(0, mediaStreams.get(m).getName().length() - 4).concat(".srt")))
+						|| files[f].getName().equals(mediaStreams.get(m).getName().substring(0, 
+								mediaStreams.get(m).getName().length() - 4).concat(".srt")))
 						{
 							isPlaying = true;
 						}
@@ -196,12 +161,5 @@ public class MenschTimerTask extends TimerTask
 				}
 			}
 		}
-		
-		isRunning = false;
-	}
-	
-	public boolean isRunning()
-	{
-		return isRunning;
 	}
 }
